@@ -213,14 +213,12 @@ void tensor::destroy_graph(void)
         delete t;
 }
 
-void do_print(const std::string& prefix, tensor* node, bool left)
+void do_print(const std::string& prefix, tensor* node, bool left, bool root=false)
 {
-    static int started = 0;
     std::cout << prefix;
 
-    if (!started) {
+    if (root) {
         std::cout << "Root ";
-        started = 1;
     } else
         std::cout << (left ? "|---" : "+---");
 
@@ -234,5 +232,5 @@ void do_print(const std::string& prefix, tensor* node, bool left)
 
 void tensor::print_graph(void)
 {
-    do_print("", this, false);
+    do_print("", this, false, true);
 }
