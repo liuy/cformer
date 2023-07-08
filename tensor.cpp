@@ -128,14 +128,25 @@ static void bwd_bsum(tensor *a, tensor *dummy, array &grad)
     af_debug(grad, a->grad);
 }
 
+#define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
+OPERATOR(add);
+OPERATOR(sub);
+OPERATOR(mul);
+OPERATOR(div);
+OPERATOR(matmul);
+OPERATOR(log);
+OPERATOR(exp);
+OPERATOR(relu);
+OPERATOR(bsum);
+
 tensor& tensor::bsum(int dim)
 {
     this->dim = dim;
-    return *(new tensor(this, nullptr, fwd_bsum, bwd_bsum));
+    return *(new tensor(this, nullptr, &oper_bsum));
 }
 
-#define METHOD(name, arg, new_arg, fn) tensor& tensor::name(arg) \
-    {tensor *r = new tensor(this, new_arg, fwd_##fn, bwd_##fn); return *r;}
+#define METHOD(name, arg, new_arg, op) tensor& tensor::name(arg) \
+    {tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
 METHOD(matmul, tensor &t, &t, matmul)
 METHOD(operator+, tensor &t, &t, add)
 METHOD(operator-, tensor &t, &t, sub)
@@ -153,15 +164,18 @@ void tensor::forward(void)
         lhs->forward();
     if (rhs && !rhs->is_leaf())
         rhs->forward();
-    data = forward_fn(lhs, rhs);
+    cf_debug("%s", op->name);
+    data = op->forward_fn(lhs, rhs);
     //data_computed = true;
     grad = af::constant(0, data.dims());
 }
 
 static void do_backward(tensor *t)
 {
-    if (t->backward_fn)
-        t->backward_fn(t->lhs, t->rhs, t->grad);
+    if (t->is_leaf())
+        return;
+    if (t->op && t->op->backward_fn)
+        t->op->backward_fn(t->lhs, t->rhs, t->grad);
     if (t->lhs)
         do_backward(t->lhs);
     if (t->rhs)
@@ -197,4 +211,28 @@ void tensor::destroy_graph(void)
     get_nonleafs(this, nonleafs);
     for (auto t : nonleafs)
         delete t;
+}
+
+void do_print(const std::string& prefix, tensor* node, bool left)
+{
+    static int started = 0;
+    std::cout << prefix;
+
+    if (!started) {
+        std::cout << "Root ";
+        started = 1;
+    } else
+        std::cout << (left ? "|---" : "+---");
+
+    std::cout << (node->is_leaf() ? " Leaf" : node->op->name) << std::endl;
+
+    if (node->lhs)
+        do_print(prefix + (left ? "|    " : "     "), node->lhs, true);
+    if (node->rhs)
+        do_print(prefix + (left ? "|    " : "     "), node->rhs, false);
+}
+
+void tensor::print_graph(void)
+{
+    do_print("", this, false);
 }
