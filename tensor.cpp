@@ -212,12 +212,12 @@ void do_print(const std::string& prefix, tensor* node, bool left, bool root=fals
 {
     std::cout << prefix;
 
-    if (root) {
+    if (root)
         std::cout << "Root ";
-    } else
+    else
         std::cout << (left ? "|---" : "+---");
 
-    std::cout << (node->is_leaf() ? " Leaf" : node->op->name) << std::endl;
+    std::cout << (node->is_leaf() ? "Leaf" : node->op->name) << std::endl;
 
     if (node->lhs)
         do_print(prefix + (left ? "|    " : "     "), node->lhs, true);
@@ -229,3 +229,4 @@ void tensor::print_graph(void)
 {
     do_print("", this, false, true);
 }
+
