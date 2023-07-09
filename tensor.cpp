@@ -139,14 +139,8 @@ OPERATOR(exp);
 OPERATOR(relu);
 OPERATOR(bsum);
 
-tensor& tensor::bsum(int dim)
-{
-    this->dim = dim;
-    return *(new tensor(this, nullptr, &oper_bsum));
-}
-
-#define METHOD(name, arg, new_arg, op) tensor& tensor::name(arg) \
-    {tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
+#define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
+    { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
 METHOD(matmul, tensor &t, &t, matmul)
 METHOD(operator+, tensor &t, &t, add)
 METHOD(operator-, tensor &t, &t, sub)
@@ -155,6 +149,7 @@ METHOD(operator/, tensor &t, &t, div)
 METHOD(log, void, nullptr, log)
 METHOD(exp, void, nullptr, exp)
 METHOD(relu, void, nullptr, relu)
+METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
 
 void tensor::forward(void)
 {
