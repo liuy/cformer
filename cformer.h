@@ -119,9 +119,6 @@ enum activ_t {None, ReLU, Sigmoid, Tanh};
 
 struct linear : layer {
     tensor weight, bias;
-    bool no_bias;
-    initializer_t init;
-    activ_t act;
     linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
         : act(a), init(a == ReLU ? kaiming_uniform : xavier_uniform), no_bias(nb),
         weight(init(in, out, t)),
@@ -135,6 +132,18 @@ struct linear : layer {
          */
         bias(no_bias ? array() : af::transpose(init(out, 1, t))) {}
     tensor& forward(tensor &x) override;
+
+private:
+    activ_t act;
+    initializer_t init;
+    bool no_bias;
+};
+
+struct seq_net {
+    std::vector<layer*> layers;
+    seq_net(std::initializer_list<layer*> list) { for (auto i : list) add(i); }
+    ~seq_net() { for (auto i : layers) delete i; }
+    inline void add(layer *l) { layers.push_back(l); }
 };
 
 #ifdef CF_DEBUG
