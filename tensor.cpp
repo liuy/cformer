@@ -97,7 +97,7 @@ static array fwd_relu(tensor *a, tensor *dummy)
 static void bwd_relu(tensor *a, tensor *dummy, array &grad)
 {
     array zero = af::constant(0, a->data.dims(), a->data.type());
-    update_grad(a, af::select(a > zero, grad, zero));
+    update_grad(a, af::select(a->data > zero, grad, zero));
     af_debug(grad, a->grad);
 }
 
