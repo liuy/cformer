@@ -98,3 +98,22 @@ TEST(Tensor, relu_tanh_sigmoid)
     array_eq(c.grad, {0.2082547f, 0.0009733f, 0.2596943f});
     z.destroy_graph();
 }
+
+static tensor& forward(tensor &x)
+{
+    static tensor w(af::constant(2, 1, 3));
+    static tensor b(af::constant(3, 1, 3));
+
+    return w * x + b;
+}
+
+TEST(Tensor, stacked_var)
+{
+    tensor x = af::constant(2, 1, 3);
+    tensor out1 = forward(x);
+    tensor out2 = forward(out1);
+
+    out2.backward();
+    array_eq(out2.data, {17.f, 17.f, 17.f});
+    array_eq(x.grad, {4.f, 4.f, 4.f});
+}

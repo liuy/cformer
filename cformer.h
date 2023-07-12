@@ -27,15 +27,22 @@ struct tensor {
     tensor *lhs = nullptr; // left-hand-side of the expression
     int dim = 0;           // parameter of lhs
     tensor *rhs = nullptr; // right-hand-side of the expression
-    oper *op; // operator of the expression
+    oper *op;              // operator of the expression
+    bool no_delete = true; // whether to delete the tensor by .destroy_graph()
 
-    tensor(const array &a): data(a), grad(af::constant(0, a.dims())) {}
-    tensor(const tensor &t) = delete; // No tensor y = a; use tensor &y = a instead
-    tensor(tensor *a, tensor *b, oper *o) : lhs(a), rhs(b), op(o) {}
-    //~tensor() { printf("~tensor() %p\n", this); }
+#define copy_delete(t) data = t.data; grad = t.grad; lhs = t.lhs; rhs = t.rhs; \
+        dim = t.dim; op = t.op; if (!t.no_delete) delete &t;
 
+    tensor() = default;
+    tensor(const array &a) : data(a), grad(af::constant(0, a.dims())) {} // for leaf tensor
+    tensor(const tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
+    tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
+        : lhs(a), rhs(b), op(o), no_delete(false) {}
+    void operator=(tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
+    //~tensor() { printf("~tensor() %p\n", }
+#undef copy_delete
     // we overload the operators to construct a computational graph. For e.g,
-    //  y = a * b + a / c will be constructed as follows:
+    // tensor y = a * b + a / c will be constructed as follows:
     //        y(+)        y  = t1 + t2
     //       /   \
     //    t1(*)  t2(/)    t1 = a * b
@@ -44,12 +51,15 @@ struct tensor {
     // Then we call forward() on y to evaluate the expressions and backward() to
     // compute the gradients. With .forward() and .backward() we implement the
     // so-called "autograd"(Automatic Differentiation) in ML frameworks like PyTorch
-    // and TensorFlow. Temporary tensors t1, t2, y are created on the heap and call
+    // and TensorFlow. Temporary tensors t1, t2 are created on the heap and call
     // .destroy_graph() to delete them after use.
     // For e.g, if we call y.backward() on the above graph, we will get by Chain Rule:
     // use da to denote dL/da, and so on...
     // y.grad(dy) = 1, t1.grad(dt1) = 1, t2.grad(dt2) = 1,
     // a.grad(da) = b + 1/c, b.grad(db) = a, c.grad(dc) = -a/c^2
+    //
+    // we recommend root and leaf tensors are allocated on the stack and tensors returned
+    // by operators are allocated on the heap.
     void forward(void);
     void backward(void);
     void destroy_graph(void);

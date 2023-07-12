@@ -234,10 +234,11 @@ void tensor::destroy_graph(void)
     std::unordered_set<tensor *> nonleafs;
     get_nonleafs(this, nonleafs);
     for (auto t : nonleafs)
-        delete t;
+        if (!t->no_delete)
+            delete t;
 }
 
-void do_print(const std::string& prefix, tensor* node, bool left, bool root=false)
+static void do_print(const std::string& prefix, tensor* node, bool left, bool root=false)
 {
     std::cout << prefix;
 

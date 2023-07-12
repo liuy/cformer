@@ -15,4 +15,5 @@ test:
 
 clean:
 	@rm -rf build
+	@rm -rf core.*
 	@echo "clean done"
