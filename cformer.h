@@ -61,6 +61,8 @@ struct tensor {
     tensor& log(void);
     tensor& exp(void);
     tensor& relu(void);
+    tensor& sigmoid(void);
+    tensor& tanh(void);
     /// @brief Sum all values along dimension dim and broadcast to the original shape.
     /// @param dim The dimension along which the add operation occurs.
     tensor& bsum(int);
@@ -68,6 +70,71 @@ struct tensor {
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
     tensor& operator/(tensor &t);
+};
+
+// kaiming_uniform is randu value [-limit, limit] and mostly for ReLU activation
+static inline array kaiming_uniform(int in, int out, const af::dtype t = f32)
+{
+    double limit = sqrt(6.0 / in);
+    return af::randu(in, out, t) * 2 * limit - limit;
+}
+
+// xavier_uniform is randu value [-limit, limit] and mostly for tanh and sigmoid
+static inline array xavier_uniform(int in, int out, const af::dtype t = f32)
+{
+    double limit = sqrt(6.0 / (in + out));
+    return af::randu(in, out, t) * 2 * limit - limit;
+}
+
+// kaiming_normal is randn value with mean 0 and std sqrt(2.0 / in) and mostly for ReLU
+static inline array kaiming_normal(int in, int out, const af::dtype ty = f32)
+{
+   return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / in);
+}
+
+// xavier_normal is randn value with mean 0 and std sqrt(2.0 / (in + out)) and mostly for tanh and sigmoid
+static inline array xavier_normal(int in, int out, uint64_t seed = 0, const af::dtype ty = f32)
+{
+    return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / (in + out));
+}
+
+typedef array (*initializer_t)(int, int, const af::dtype);
+
+struct layer {
+    virtual ~layer() = default;
+    virtual tensor& forward(tensor &x) = 0;
+    inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
+};
+
+// broadcast the bias to the same shape as the input
+static inline void broadcast(tensor &b, int rownum)
+{
+    if (b.data.dims(0) == rownum)
+        return;
+    b.data = af::tile(b.data, rownum);
+    b.grad = af::tile(b.grad, rownum);
+}
+
+enum activ_t {None, ReLU, Sigmoid, Tanh};
+
+struct linear : layer {
+    tensor weight, bias;
+    bool no_bias;
+    initializer_t init;
+    activ_t act;
+    linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
+        : act(a), init(a == ReLU ? kaiming_uniform : xavier_uniform), no_bias(nb),
+        weight(init(in, out, t)),
+        /** Notes on bias initialization:
+         * Generally, there are 4 recommended ways to initialize the bias:
+         * 1. use weight initializer (default for this layer)
+         * 2. constant 0
+         * 3. constant 0.01
+         * 4. just any small random value
+         * You can actually set layer.bias directly if you want to override the default.
+         */
+        bias(no_bias ? array() : af::transpose(init(out, 1, t))) {}
+    tensor& forward(tensor &x) override;
 };
 
 #ifdef CF_DEBUG

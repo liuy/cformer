@@ -5,6 +5,7 @@ set(FILES
     main.cpp
     cformer.h
     tensor.cpp
+    net.cpp
 )
 
 option(CF_DEBUG "Enable debug" off)

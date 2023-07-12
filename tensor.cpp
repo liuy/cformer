@@ -89,21 +89,22 @@ static void bwd_exp(tensor *a, tensor *b, array &grad)
 
 static array fwd_relu(tensor *a, tensor *dummy)
 {
-    array zero = af::constant(0, a->data.dims());
+    array zero = af::constant(0, a->data.dims(), a->data.type());
     return af::max(a->data, zero);
 }
 
 // y = relu(x) => dx = dy * (x > 0)
 static void bwd_relu(tensor *a, tensor *dummy, array &grad)
 {
-    array zero = af::constant(0, a->data.dims());
+    array zero = af::constant(0, a->data.dims(), a->data.type());
     update_grad(a, af::select(a > zero, grad, zero));
+    af_debug(grad, a->grad);
 }
 
-// y = brad(sum(x)), sum(x) over dim and then bradcast it to same shape as x.
+// y = broadcast(sum(x)), sum(x) over dim and then bradcast it to same shape as x.
 // sum() redues the dimension of x along dim to 1 and brad() matmul it back by a broadcasting matrix.
-// brad(a) = B0 @ a if dim = 0, B0 = ones(a.dims[0], 1)
-// brad(a) = a @ B1 if dim = 1, B1 = ones(1, a.dims[1])
+// broadcast(a) = B0 @ a if dim = 0, B0 = ones(a.dims[0], 1)
+// broadcast(a) = a @ B1 if dim = 1, B1 = ones(1, a.dims[1])
 static array fwd_bsum(tensor *a, tensor *dummy)
 {
     af::dim4 dims = {1, 1, 1, 1};
@@ -128,6 +129,30 @@ static void bwd_bsum(tensor *a, tensor *dummy, array &grad)
     af_debug(grad, a->grad);
 }
 
+static array fwd_sigmoid(tensor *a, tensor *dummy)
+{
+    return af::sigmoid(a->data);
+}
+
+static void bwd_sigmoid(tensor *a, tensor *dummy, array &grad)
+{
+    array sig = af::sigmoid(a->data);
+    update_grad(a, grad * sig * (1 - sig));
+    af_debug(grad, a->grad);
+}
+
+static array fwd_tanh(tensor *a, tensor *dummy)
+{
+    return af::tanh(a->data);
+}
+
+static void bwd_tanh(tensor *a, tensor *dummy, array &grad)
+{
+    array tanh = af::tanh(a->data);
+    update_grad(a, grad * (1 - tanh * tanh));
+    af_debug(grad, a->grad);
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -137,6 +162,8 @@ OPERATOR(matmul);
 OPERATOR(log);
 OPERATOR(exp);
 OPERATOR(relu);
+OPERATOR(sigmoid);
+OPERATOR(tanh);
 OPERATOR(bsum);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
@@ -149,6 +176,8 @@ METHOD(operator/, tensor &t, &t, div)
 METHOD(log, void, nullptr, log)
 METHOD(exp, void, nullptr, exp)
 METHOD(relu, void, nullptr, relu)
+METHOD(sigmoid, void, nullptr, sigmoid)
+METHOD(tanh, void, nullptr, tanh)
 METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
 
 void tensor::forward(void)
