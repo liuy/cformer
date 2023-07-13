@@ -117,3 +117,31 @@ TEST(Tensor, stacked_var)
     array_eq(out2.data, {17.f, 17.f, 17.f});
     array_eq(x.grad, {4.f, 4.f, 4.f});
 }
+
+TEST(Tensor, add_assign)
+{
+    tensor a(af::constant(1, 1, 3));
+    tensor b(af::constant(2, 3, 3));
+    tensor c(af::constant(3, 1, 3));
+    tensor &z = a.matmul(b);
+    z += c;
+    z.backward();
+    EXPECT_FLOAT_EQ(first(z.data), 9);
+    EXPECT_FLOAT_EQ(first(a.grad), 6);
+    EXPECT_FLOAT_EQ(first(b.grad), 1);
+    EXPECT_FLOAT_EQ(first(c.grad), 1);
+    z.destroy_graph();
+
+    a.zero_grad();
+    b.zero_grad();
+    c.zero_grad();
+
+    tensor y = a.matmul(b);
+    y += c;
+    y.backward();
+    EXPECT_FLOAT_EQ(first(y.data), 9);
+    EXPECT_FLOAT_EQ(first(a.grad), 6);
+    EXPECT_FLOAT_EQ(first(b.grad), 1);
+    EXPECT_FLOAT_EQ(first(c.grad), 1);
+    y.destroy_graph();
+}

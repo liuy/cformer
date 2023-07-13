@@ -39,7 +39,7 @@ struct tensor {
     tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
         : lhs(a), rhs(b), op(o), no_delete(false) {}
     void operator=(tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
-    //~tensor() { printf("~tensor() %p\n", }
+    //~tensor() { printf("~tensor() %p\n", this); }
 #undef copy_delete
     // we overload the operators to construct a computational graph. For e.g,
     // tensor y = a * b + a / c will be constructed as follows:
@@ -80,6 +80,7 @@ struct tensor {
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
     tensor& operator/(tensor &t);
+    void operator+=(tensor &t);
 };
 
 // kaiming_uniform is randu value [-limit, limit] and mostly for ReLU activation

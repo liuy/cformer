@@ -180,6 +180,18 @@ METHOD(sigmoid, void, nullptr, sigmoid)
 METHOD(tanh, void, nullptr, tanh)
 METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
 
+// y += c will create a new tensor y' takes the value of y, then y = y' + c
+void tensor::operator+= (tensor &t)
+{
+    /* FIXME: this is a hack to copy tensor blindly. can we do better? */
+    tensor *tmp = new tensor(this->lhs, this->rhs, this->op); // no_delete = false
+    tmp->data = this->data;
+    tmp->grad = this->grad;
+    tmp->dim = this->dim;
+    // Note = is a copy_delete operation. can we swap it to avoid extra copy?
+    *this = *tmp + t;
+}
+
 void tensor::forward(void)
 {
     if (is_leaf())
