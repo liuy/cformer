@@ -5,6 +5,9 @@
 #include <unordered_set>
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <vector>
+#include <cassert>
 
 using af::array;
 
@@ -156,6 +159,32 @@ struct seq_net {
     ~seq_net() { for (auto i : layers) delete i; }
     inline void add(layer *l) { layers.push_back(l); }
 };
+
+// ********************** helper functions **********************
+static inline int32_t read_i32(std::ifstream &file)
+{
+    int32_t value;
+    file.read(reinterpret_cast<char*>(&value), sizeof(value));
+    return value;
+}
+
+static inline void read_data(std::ifstream &file, void *data, size_t size)
+{
+    file.read(reinterpret_cast<char*>(data), size);
+}
+
+
+static inline array onehot(const array &a, int num_classes = 10)
+{
+    assert(a.numdims() == 1);
+    array iden = af::identity(num_classes, num_classes, a.type());
+    return af::lookup(iden, a);
+}
+
+// endian conversion helpers
+#define bswap_16(x) __builtin_bswap16(x)
+#define bswap_32(x) __builtin_bswap32(x)
+#define bswap_64(x) __builtin_bswap64(x)
 
 #ifdef CF_DEBUG
 template <typename... Args>
