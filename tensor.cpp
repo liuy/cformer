@@ -259,7 +259,7 @@ static void do_print(const std::string& prefix, tensor* node, bool left, bool ro
     else
         std::cout << (left ? "|---" : "+---");
 
-    std::cout << (node->is_leaf() ? "Leaf" : node->op->name) << std::endl;
+    std::cout << (node->is_leaf() ? "Leaf" : node->op->name) << (node->no_delete ? "" : "*") << std::endl;
 
     if (node->lhs)
         do_print(prefix + (left ? "|    " : "     "), node->lhs, true);
