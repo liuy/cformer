@@ -11,6 +11,13 @@ static inline void array_eq(const array &a, std::initializer_list<float> list)
         EXPECT_NEAR(index(a, i), list.begin()[i], 1e-6);
 }
 
+static inline void array_eq(const array &a, const array &b)
+{
+    ASSERT_EQ(a.elements(), b.elements());
+    for (int i = 0; i < a.elements(); i++)
+        EXPECT_NEAR(index(a, i), index(b, i), 1e-6);
+}
+
 TEST(Tensor, add_sub_mul_div)
 {
     tensor a(af::constant(1, 1, 3));
@@ -144,4 +151,25 @@ TEST(Tensor, add_assign)
     EXPECT_FLOAT_EQ(first(b.grad), 1);
     EXPECT_FLOAT_EQ(first(c.grad), 1);
     y.destroy_graph();
+}
+
+TEST(Tensor, sum_neg)
+{
+    tensor a(af::randu(2, 3));
+    tensor s = a.sum(0);
+
+    s.backward();
+    EXPECT_FLOAT_EQ(first(s.data), af::sum<float>(a.data.col(0)));
+    EXPECT_FLOAT_EQ(index(s.data, 1), af::sum<float>(a.data.col(1)));
+    EXPECT_FLOAT_EQ(index(s.data, 2), af::sum<float>(a.data.col(2)));
+    array_eq(a.grad, af::constant(1, 2, 3));
+    s.destroy_graph();
+    a.zero_grad();
+
+    s = -a.sum(1);
+    s.backward();
+    EXPECT_FLOAT_EQ(first(-s.data), af::sum<float>(a.data.row(0)));
+    EXPECT_FLOAT_EQ(index(-s.data, 1), af::sum<float>(a.data.row(1)));
+    array_eq(a.grad, af::constant(-1, 2, 3));
+    s.destroy_graph();
 }

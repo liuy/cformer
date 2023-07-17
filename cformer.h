@@ -79,11 +79,13 @@ struct tensor {
     /// @brief Sum all values along dimension dim and broadcast to the original shape.
     /// @param dim The dimension along which the add operation occurs.
     tensor& bsum(int);
+    tensor& sum(int);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
     tensor& operator/(tensor &t);
     void operator+=(tensor &t);
+    tensor& operator-(void);
 };
 
 // kaiming_uniform is randu value [-limit, limit] and mostly for ReLU activation

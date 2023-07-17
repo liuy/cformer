@@ -49,6 +49,11 @@ void read_mnist(const std::string &images, const std::string &labels, tensor &x,
     y.assign_data(b);
 }
 
+static tensor& softmax(tensor &x, int dim)
+{
+    return x.exp()/x.exp().bsum(dim);
+}
+
 int main(int argc, char* argv[])
 {
     tensor train_x, train_y;
@@ -56,5 +61,6 @@ int main(int argc, char* argv[])
     printf("%d\n", train_y.data.type());
     af_print(train_y.data.row(0));
     af_print(onehot(array(2, {3,4}), 5));
+
     return 0;
 }

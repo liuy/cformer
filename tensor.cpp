@@ -153,11 +153,37 @@ static void bwd_tanh(tensor *a, tensor *dummy, array &grad)
     af_debug(grad, a->grad);
 }
 
+static array fwd_sum(tensor *a, tensor *dummy)
+{
+    return af::sum(a->data, a->dim);
+}
+
+static void bwd_sum(tensor *a, tensor *dummy, array &grad)
+{
+    af::dim4 dims = {1, 1, 1, 1};
+    dims[a->dim] = a->data.dims(a->dim);
+    array t = af::tile(grad, dims);
+    update_grad(a, t);
+    af_debug(grad, a->grad);
+}
+
+static array fwd_neg(tensor *a, tensor *dummy)
+{
+    return -a->data;
+}
+
+static void bwd_neg(tensor *a, tensor *dummy, array &grad)
+{
+    update_grad(a, -grad);
+    af_debug(grad, a->grad);
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
 OPERATOR(mul);
 OPERATOR(div);
+OPERATOR(neg);
 OPERATOR(matmul);
 OPERATOR(log);
 OPERATOR(exp);
@@ -165,6 +191,7 @@ OPERATOR(relu);
 OPERATOR(sigmoid);
 OPERATOR(tanh);
 OPERATOR(bsum);
+OPERATOR(sum);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
     { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
@@ -173,12 +200,14 @@ METHOD(operator+, tensor &t, &t, add)
 METHOD(operator-, tensor &t, &t, sub)
 METHOD(operator*, tensor &t, &t, mul)
 METHOD(operator/, tensor &t, &t, div)
+METHOD(operator-, void, nullptr, neg)
 METHOD(log, void, nullptr, log)
 METHOD(exp, void, nullptr, exp)
 METHOD(relu, void, nullptr, relu)
 METHOD(sigmoid, void, nullptr, sigmoid)
 METHOD(tanh, void, nullptr, tanh)
 METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
+METHOD(sum, int dim, nullptr, sum, this->dim = dim)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)
