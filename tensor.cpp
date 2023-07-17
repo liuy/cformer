@@ -178,6 +178,20 @@ static void bwd_neg(tensor *a, tensor *dummy, array &grad)
     af_debug(grad, a->grad);
 }
 
+// For x@w + b to work, b is broadcasted to the same shape as x@w (batch_size, out).
+static array fwd_bdim0(tensor *a, tensor *dummy)
+{
+    assert(a->data.dims(0) == 1);
+    return af::tile(a->data, a->dim);
+}
+
+// y = bdim0(x) => dx = sum(dy, dim=0)
+static void bwd_bdim0(tensor *a, tensor *dummy, array &grad)
+{
+    update_grad(a, af::sum(grad, 0));
+    af_debug(grad, a->grad);
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -192,6 +206,7 @@ OPERATOR(sigmoid);
 OPERATOR(tanh);
 OPERATOR(bsum);
 OPERATOR(sum);
+OPERATOR(bdim0);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
     { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
@@ -208,6 +223,7 @@ METHOD(sigmoid, void, nullptr, sigmoid)
 METHOD(tanh, void, nullptr, tanh)
 METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
 METHOD(sum, int dim, nullptr, sum, this->dim = dim)
+METHOD(bdim0, int dimnum, nullptr, bdim0, this->dim = dimnum)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)

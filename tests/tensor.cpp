@@ -173,3 +173,15 @@ TEST(Tensor, sum_neg)
     array_eq(a.grad, af::constant(-1, 2, 3));
     s.destroy_graph();
 }
+
+TEST(Tensor, bdim0)
+{
+    tensor x(af::constant(2, 1, 3));
+    tensor y(af::constant(3, 2, 3));
+    tensor &z = y * x.bdim0(2);
+    z.backward();
+    EXPECT_FLOAT_EQ(first(z.data), 6);
+    EXPECT_FLOAT_EQ(first(x.grad), 6);
+    EXPECT_FLOAT_EQ(first(y.grad), 2);
+    z.destroy_graph();
+}

@@ -80,6 +80,7 @@ struct tensor {
     /// @param dim The dimension along which the add operation occurs.
     tensor& bsum(int);
     tensor& sum(int);
+    tensor& bdim0(int);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
@@ -121,15 +122,6 @@ struct layer {
     virtual tensor& forward(tensor &x) = 0;
     inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
 };
-
-// broadcast the bias to the same shape as the input
-static inline void broadcast(tensor &b, int rownum)
-{
-    if (b.data.dims(0) == rownum)
-        return;
-    b.data = af::tile(b.data, rownum);
-    b.grad = af::tile(b.grad, rownum);
-}
 
 enum activ_t {None, ReLU, Sigmoid, Tanh};
 

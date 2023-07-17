@@ -3,10 +3,8 @@
 tensor& linear::forward(tensor &x)
 {
     tensor &y = x.matmul(weight);
-    if (!no_bias) {
-        broadcast(bias, x.data.dims(0));
-        y += bias;
-    }
+    if (!no_bias)
+        y += bias.bdim0(y.data.dims(0));
     switch(act) {
     case ReLU:
         return y.relu();
