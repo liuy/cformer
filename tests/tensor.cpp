@@ -185,3 +185,11 @@ TEST(Tensor, bdim0)
     EXPECT_FLOAT_EQ(first(y.grad), 2);
     z.destroy_graph();
 }
+
+TEST(Tensor, log)
+{
+    tensor zero(af::constant(0, 1, 3));
+    tensor log = zero.log();
+    log.forward();
+    EXPECT_FLOAT_EQ(first(log.data), -27.631021f);
+}

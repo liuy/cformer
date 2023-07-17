@@ -66,9 +66,16 @@ static void bwd_matmul(tensor *a, tensor *b, array &grad)
     update_grad(b, af::matmulTN(a->data, grad));
 }
 
+/**
+ * pytorch and tensorflow add EPSILON in *_cross_entropy functions to avoid log(0).
+ * we replace 0 with EPSILON here.
+ */
 static array fwd_log(tensor *a, tensor *dummy)
 {
-    return af::log(a->data);
+#define EPSILON 1e-12
+    array t(a->data);
+    af::replace(t, t != 0, EPSILON);
+    return af::log(t);
 }
 
 static void bwd_log(tensor *a, tensor *b, array &grad)
