@@ -168,6 +168,13 @@ static inline void read_data(std::ifstream &file, void *data, size_t size)
 }
 
 
+static inline array argmax(const array &a, int dim = 1)
+{
+    array max_vals, max_idxs;
+    af::max(max_vals, max_idxs, a, dim);
+    return max_idxs;
+}
+
 static inline array onehot(const array &a, int num_classes = 10)
 {
     assert(a.numdims() == 1);
