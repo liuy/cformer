@@ -118,40 +118,45 @@ static inline array xavier_normal(int in, int out, uint64_t seed = 0, const af::
 typedef array (*initializer_t)(int, int, const af::dtype);
 
 struct layer {
+    bool no_bias;
+    tensor weight, bias;
     virtual ~layer() = default;
     virtual tensor& forward(tensor &x) = 0;
     inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
 };
 
-enum activ_t {None, ReLU, Sigmoid, Tanh};
+enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax};
 
 struct linear : layer {
-    tensor weight, bias;
-    linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
-        : act(a), init(a == ReLU ? kaiming_uniform : xavier_uniform), no_bias(nb),
-        weight(init(in, out, t)),
-        /** Notes on bias initialization:
-         * Generally, there are 4 recommended ways to initialize the bias:
-         * 1. use weight initializer (default for this layer)
-         * 2. constant 0
-         * 3. constant 0.01
-         * 4. just any small random value
-         * You can actually set layer.bias directly if you want to override the default.
-         */
-        bias(no_bias ? array() : af::transpose(init(out, 1, t))) {}
-    tensor& forward(tensor &x) override;
-
-private:
     activ_t act;
     initializer_t init;
-    bool no_bias;
+
+    linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
+        : act(a), init(a == ReLU ? kaiming_uniform : xavier_uniform)
+    /** Notes on bias initialization:
+     * Generally, there are 4 recommended ways to initialize the bias:
+     * 1. use weight initializer (default for this layer)
+     * 2. constant 0
+     * 3. constant 0.01
+     * 4. just any small random value
+     * You can actually set layer.bias directly if you want to override the default.
+     */
+    {no_bias = nb; weight.assign_data(init(in, out, t));
+    if (!no_bias) bias.assign_data(af::transpose(init(out, 1, t)));}
+    //af_print(weight.data); af_print(bias.data);}
+    tensor& forward(tensor &x) override;
 };
 
 struct seq_net {
+    std::vector<tensor*> params;
     std::vector<layer*> layers;
     seq_net(std::initializer_list<layer*> list) { for (auto i : list) add(i); }
     ~seq_net() { for (auto i : layers) delete i; }
-    inline void add(layer *l) { layers.push_back(l); }
+    inline void add(layer *l)
+    { layers.push_back(l); params.push_back(&l->weight); if (!l->no_bias) params.push_back(&l->bias); }
+    void train(tensor &input, tensor &target, float lr = 0.001, int batch_size = 64, int epoch = 10);
+    tensor& forward(tensor &x);
+    inline tensor& operator()(tensor &x) { tensor &r = forward(x); r.forward(); return r; }
 };
 
 // ********************** helper functions **********************

@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11 -g")
 
 find_package(ArrayFire)
 add_executable(cformer ${FILES})
-target_link_libraries(cformer ArrayFire::afcpu)
+target_link_libraries(cformer ArrayFire::afcuda)
 
 option(CF_TEST "Enable tests" off)
 if(CF_TEST)

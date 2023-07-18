@@ -188,7 +188,8 @@ static void bwd_neg(tensor *a, tensor *dummy, array &grad)
 // For x@w + b to work, b is broadcasted to the same shape as x@w (batch_size, out).
 static array fwd_bdim0(tensor *a, tensor *dummy)
 {
-    assert(a->data.dims(0) == 1);
+    cf_debug("bdim0: %d", a->dim);
+    assert(a->data.dims(0) == 1 && a->dim != 0);
     return af::tile(a->data, a->dim);
 }
 
@@ -310,8 +311,9 @@ static void do_print(const std::string& prefix, tensor* node, bool left, bool ro
         std::cout << "Root ";
     else
         std::cout << (left ? "|---" : "+---");
-
-    std::cout << (node->is_leaf() ? "Leaf" : node->op->name) << (node->no_delete ? "" : "*") << std::endl;
+    std::stringstream ss;
+    ss << node;
+    std::cout << (node->is_leaf() ? "Leaf" : node->op->name) << (node->no_delete ? "" : "*" + ss.str()) << std::endl;
 
     if (node->lhs)
         do_print(prefix + (left ? "|    " : "     "), node->lhs, true);
