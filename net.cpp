@@ -4,7 +4,7 @@ tensor& linear::forward(tensor &x)
 {
     tensor &y = x.matmul(weight);
     if (!no_bias)
-        y += bias.bdim0(x.data.dims(0));
+        y += bias.bdim0(x);
     switch(act) {
     case ReLU:
         return y.relu();

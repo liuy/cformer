@@ -80,7 +80,7 @@ struct tensor {
     /// @param dim The dimension along which the add operation occurs.
     tensor& bsum(int);
     tensor& sum(int);
-    tensor& bdim0(int);
+    tensor& bdim0(tensor &t);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
