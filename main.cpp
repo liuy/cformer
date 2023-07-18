@@ -69,13 +69,13 @@ int main(int argc, char* argv[])
     read_mnist("data/mnist/t10k-images-idx3-ubyte", "data/mnist/t10k-labels-idx1-ubyte", test_x, test_y);
 
     seq_net model {
-        new linear(28*28, 256, ReLU),
+        new linear(28*28, 256, ReLU, true),
     //    new linear(256, 128, ReLU),
-        new linear(256, 10, Softmax),
+        new linear(256, 10, Softmax, true),
     };
     // tensor x(train_x.data.rows(0,9));
     // tensor y(train_y.data.rows(0,9));
-    model.train(train_x, train_y, 0.005, 100, 10);
+    model.train(train_x, train_y, 0.001, 100, 20);
     tensor tx(test_x.data.rows(0, 20));
     tensor ty(test_y.data.rows(0, 20));
     tensor &y_pred = model(tx);

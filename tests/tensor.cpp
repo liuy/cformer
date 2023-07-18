@@ -178,7 +178,7 @@ TEST(Tensor, bdim0)
 {
     tensor x(af::constant(2, 1, 3));
     tensor y(af::constant(3, 2, 3));
-    tensor &z = y * x.bdim0(2);
+    tensor &z = y * x.bdim0(y);
     z.backward();
     EXPECT_FLOAT_EQ(first(z.data), 6);
     EXPECT_FLOAT_EQ(first(x.grad), 6);
