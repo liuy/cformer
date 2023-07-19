@@ -36,22 +36,38 @@ static tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred, bool fr
     return -(y_true*y_pred.log()).sum(1);
 }
 
-void seq_net::train(tensor &x, tensor &y, float lr, int bacth_size, int epoch)
+static void update_loss_metrics(float loss, tensor &y_true, tensor &y_pred, int epoch, bool end)
 {
-    int n = x.data.dims(0);
+    static std::vector<float> epoch_loss;
+    static std::vector<float> epoch_accu;
+    float accu = af::sum<float>(argmax(y_true.data) == argmax(y_pred.data)) / y_true.data.dims(0);
+    epoch_loss.push_back(loss);
+    epoch_accu.push_back(accu);
+
+    if (!end)
+        return;
+
+    float avg_loss = std::accumulate(epoch_loss.begin(), epoch_loss.end(), 0.0) / epoch_loss.size();
+    float avg_accu = std::accumulate(epoch_accu.begin(), epoch_accu.end(), 0.0) / epoch_accu.size();
+    printf("| %-9.1f | %-5d | %-10.5f | %-10.5f |\n", af::timer::stop(), epoch, avg_loss, avg_accu);
+    epoch_loss.clear();
+    epoch_accu.clear();
+}
+
+void seq_net::train(data &set, float lr, int bacth_size, int epoch)
+{
+    size_t n = set.num_examples();
+    printf("| Time Used | Epoch | Train Loss | Train Accu |\n");
     for (int i = 0; i < epoch; i++) {
+        af::timer::start();
         for (int j = 0; j < n; j += bacth_size) {
-            tensor x_batch(x.data.rows(j, j + bacth_size - 1));
-            tensor y_true(y.data.rows(j, j + bacth_size - 1));
+            tensor x_batch(set.train_x.data.rows(j, j + bacth_size - 1));
+            tensor y_true(set.train_y.data.rows(j, j + bacth_size - 1));
             tensor &y_pred = forward(x_batch);
             tensor &loss = categorical_cross_entropy(y_true, y_pred);
 
-            // if (j == 0)
-            //     loss.print_graph();
             loss.backward();
             //af_print(y_pred.data);
-            if (j % 20000 == 0)
-                printf("epoch %d, %d, %f\n", i, j, af::sum<float>(loss.data) / bacth_size);
             //af_print(loss.data);
             for (auto t : params) {
                 t->data -= lr * t->grad;
@@ -59,6 +75,8 @@ void seq_net::train(tensor &x, tensor &y, float lr, int bacth_size, int epoch)
                 // af_print(t->grad);
                 t->grad = 0;
             }
+            float batch_loss = af::sum<float>(loss.data) / bacth_size;
+            update_loss_metrics(batch_loss, y_true, y_pred, i, j + bacth_size >= n);
             loss.destroy_graph();
         }
     }

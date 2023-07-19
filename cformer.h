@@ -8,6 +8,7 @@
 #include <fstream>
 #include <vector>
 #include <cassert>
+#include <bits/stdc++.h>
 
 using af::array;
 
@@ -147,6 +148,18 @@ struct linear : layer {
     tensor& forward(tensor &x) override;
 };
 
+typedef void (*data_reader_t)(tensor &tri, tensor &trl, tensor &tei, tensor &tel);
+void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &ts_label);
+
+struct data {
+    tensor train_x, train_y, test_x, test_y;
+    data_reader_t data_reader;
+    data(data_reader_t dr) : data_reader(dr) {}
+    inline size_t num_examples(void) { return train_x.data.dims(0); }
+    void load(void)
+    { data_reader(train_x, train_y, test_x, test_y); }
+};
+
 struct seq_net {
     std::vector<tensor*> params;
     std::vector<layer*> layers;
@@ -154,7 +167,7 @@ struct seq_net {
     ~seq_net() { for (auto i : layers) delete i; }
     inline void add(layer *l)
     { layers.push_back(l); params.push_back(&l->weight); if (!l->no_bias) params.push_back(&l->bias); }
-    void train(tensor &input, tensor &target, float lr = 0.001, int batch_size = 64, int epoch = 10);
+    void train(data &set, float lr = 0.001, int batch_size = 64, int epoch = 10);
     tensor& forward(tensor &x);
     inline tensor& operator()(tensor &x) { tensor &r = forward(x); r.forward(); return r; }
 };

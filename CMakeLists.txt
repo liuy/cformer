@@ -6,6 +6,7 @@ set(FILES
     cformer.h
     tensor.cpp
     net.cpp
+    data.cpp
 )
 
 option(CF_DEBUG "Enable debug" off)
@@ -13,7 +14,7 @@ if(CF_DEBUG)
     add_compile_definitions(CF_DEBUG)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native -std=c++11 -g")
 
 find_package(ArrayFire)
 add_executable(cformer ${FILES})

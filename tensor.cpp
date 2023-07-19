@@ -27,7 +27,6 @@ static void bwd_sub(tensor *a, tensor *b, array &grad)
 {
     update_grad(a, grad);
     update_grad(b, -grad);
-    af_debug(grad, a->grad, b->grad);
 }
 
 static array fwd_mul(tensor *a, tensor *b)
@@ -39,7 +38,6 @@ static void bwd_mul(tensor *a, tensor *b, array &grad)
 {
     update_grad(a, b->data * grad);
     update_grad(b, a->data * grad);
-    af_debug(grad, a->grad, b->grad);
 }
 
 static array fwd_div(tensor *a, tensor *b)
@@ -51,7 +49,6 @@ static void bwd_div(tensor *a, tensor *b, array &grad)
 {
     update_grad(a, grad / b->data);
     update_grad(b, -grad * a->data / (b->data * b->data));
-    af_debug(grad, a->grad, b->grad);
 }
 
 static array fwd_matmul(tensor *a, tensor *b)
@@ -91,7 +88,6 @@ static array fwd_exp(tensor *a, tensor *dummy)
 static void bwd_exp(tensor *a, tensor *b, array &grad)
 {
     update_grad(a, grad * af::exp(a->data));
-    af_debug(grad, a->grad);
 }
 
 static array fwd_relu(tensor *a, tensor *dummy)
@@ -105,7 +101,6 @@ static void bwd_relu(tensor *a, tensor *dummy, array &grad)
 {
     array zero = af::constant(0, a->data.dims(), a->data.type());
     update_grad(a, af::select(a->data > zero, grad, zero));
-    af_debug(grad, a->grad);
 }
 
 // y = broadcast(sum(x)), sum(x) over dim and then bradcast it to same shape as x.
@@ -133,7 +128,6 @@ static void bwd_bsum(tensor *a, tensor *dummy, array &grad)
     else
         panic("dim must be 0 or 1, but got %d", a->dim);
     update_grad(a, t);
-    af_debug(grad, a->grad);
 }
 
 static array fwd_sigmoid(tensor *a, tensor *dummy)
@@ -145,7 +139,6 @@ static void bwd_sigmoid(tensor *a, tensor *dummy, array &grad)
 {
     array sig = af::sigmoid(a->data);
     update_grad(a, grad * sig * (1 - sig));
-    af_debug(grad, a->grad);
 }
 
 static array fwd_tanh(tensor *a, tensor *dummy)
@@ -157,7 +150,6 @@ static void bwd_tanh(tensor *a, tensor *dummy, array &grad)
 {
     array tanh = af::tanh(a->data);
     update_grad(a, grad * (1 - tanh * tanh));
-    af_debug(grad, a->grad);
 }
 
 static array fwd_sum(tensor *a, tensor *dummy)
@@ -171,7 +163,6 @@ static void bwd_sum(tensor *a, tensor *dummy, array &grad)
     dims[a->dim] = a->data.dims(a->dim);
     array t = af::tile(grad, dims);
     update_grad(a, t);
-    af_debug(grad, a->grad);
 }
 
 static array fwd_neg(tensor *a, tensor *dummy)
@@ -182,7 +173,6 @@ static array fwd_neg(tensor *a, tensor *dummy)
 static void bwd_neg(tensor *a, tensor *dummy, array &grad)
 {
     update_grad(a, -grad);
-    af_debug(grad, a->grad);
 }
 
 // For x@w + b to work, b is broadcasted to the same shape as x@w (batch_size, out).
@@ -198,7 +188,6 @@ static array fwd_bdim0(tensor *a, tensor *b)
 static void bwd_bdim0(tensor *a, tensor *b, array &grad)
 {
     update_grad(a, af::sum(grad, 0));
-    af_debug(grad, a->grad);
 }
 
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
