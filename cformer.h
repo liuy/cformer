@@ -160,11 +160,11 @@ struct data {
     { data_reader(train_x, train_y, test_x, test_y); }
 };
 
-struct seq_net {
+struct seqnet {
     std::vector<tensor*> params;
     std::vector<layer*> layers;
-    seq_net(std::initializer_list<layer*> list) { for (auto i : list) add(i); }
-    ~seq_net() { for (auto i : layers) delete i; }
+    seqnet(std::initializer_list<layer*> list) { for (auto i : list) add(i); }
+    ~seqnet() { for (auto i : layers) delete i; }
     inline void add(layer *l)
     { layers.push_back(l); params.push_back(&l->weight); if (!l->no_bias) params.push_back(&l->bias); }
     void train(data &set, float lr = 0.001, int batch_size = 64, int epoch = 10);

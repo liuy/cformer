@@ -21,7 +21,7 @@ tensor& linear::forward(tensor &x)
     }
 }
 
-tensor& seq_net::forward(tensor &x)
+tensor& seqnet::forward(tensor &x)
 {
     tensor *y = &x;
     for (auto layer : layers)
@@ -54,7 +54,7 @@ static void update_loss_metrics(float loss, tensor &y_true, tensor &y_pred, int 
     epoch_accu.clear();
 }
 
-void seq_net::train(data &set, float lr, int bacth_size, int epoch)
+void seqnet::train(data &set, float lr, int bacth_size, int epoch)
 {
     size_t n = set.num_examples();
     printf("| Time Used | Epoch | Train Loss | Train Accu |\n");
