@@ -4,8 +4,8 @@ int main(int argc, char* argv[])
 {
     seqnet model {
         new linear(28*28, 300, ReLU),
-        //new linear(256, 128, ReLU),
-        new linear(300, 10, Softmax),
+        new linear(300, 100, ReLU),
+        new linear(100, 10, Softmax),
     };
     data set(mnist_reader);
     set.load();

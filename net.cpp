@@ -49,7 +49,7 @@ static void update_loss_metrics(float loss, tensor &y_true, tensor &y_pred, int 
 
     float avg_loss = std::accumulate(epoch_loss.begin(), epoch_loss.end(), 0.0) / epoch_loss.size();
     float avg_accu = std::accumulate(epoch_accu.begin(), epoch_accu.end(), 0.0) / epoch_accu.size();
-    printf("| %-9.1f | %-5d | %-10.5f | %-10.5f |\n", af::timer::stop(), epoch, avg_loss, avg_accu);
+    printf("| %-5d | %-9.1f | %-10.5f | %-10.5f |\n", epoch, af::timer::stop(), avg_loss, avg_accu);
     epoch_loss.clear();
     epoch_accu.clear();
 }
@@ -57,7 +57,7 @@ static void update_loss_metrics(float loss, tensor &y_true, tensor &y_pred, int 
 void seqnet::train(data &set, float lr, int bacth_size, int epoch)
 {
     size_t n = set.num_examples();
-    printf("| Time Used | Epoch | Train Loss | Train Accu |\n");
+    printf("| Epoch | Time Used | Train Loss | Train Accu |\n");
     for (int i = 0; i < epoch; i++) {
         af::timer::start();
         for (int j = 0; j < n; j += bacth_size) {
@@ -67,12 +67,8 @@ void seqnet::train(data &set, float lr, int bacth_size, int epoch)
             tensor &loss = categorical_cross_entropy(y_true, y_pred);
 
             loss.backward();
-            //af_print(y_pred.data);
-            //af_print(loss.data);
             for (auto t : params) {
                 t->data -= lr * t->grad;
-                // af_print(t->data);
-                // af_print(t->grad);
                 t->grad = 0;
             }
             float batch_loss = af::sum<float>(loss.data) / bacth_size;
