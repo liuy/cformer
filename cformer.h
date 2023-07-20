@@ -28,19 +28,19 @@ struct oper {
 struct tensor {
     array data = array();  // evaluated data of the tensor
     array grad = array();  // gradient of the tensor
-    array mmt = array();   // momentum of the tensor
+    array velocity = array();   // velocity of the tensor for SGD with momentum
     tensor *lhs = nullptr; // left-hand-side of the expression
     int dim = 0;           // parameter of lhs
     tensor *rhs = nullptr; // right-hand-side of the expression
     oper *op;              // operator of the expression
     bool no_delete = true; // whether to delete the tensor by .destroy_graph()
 
-#define copy_delete(t) data = t.data; grad = t.grad; mmt = t.mmt; lhs = t.lhs; rhs = t.rhs; \
+#define copy_delete(t) data = t.data; grad = t.grad; velocity  = t.velocity ; lhs = t.lhs; rhs = t.rhs; \
         dim = t.dim; op = t.op; if (!t.no_delete) delete &t;
 
     tensor() = default;
     tensor(const array &a) : data(a), grad(af::constant(0, a.dims())),
-        mmt(af::constant(0, a.dims())) {} // for leaf tensor
+        velocity (af::constant(0, a.dims())) {} // for leaf tensor
     tensor(const tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
         : lhs(a), rhs(b), op(o), no_delete(false) {}
@@ -72,7 +72,7 @@ struct tensor {
     void print_graph(void);
     inline void zero_grad(void) {grad = 0;}
     inline void assign_data(const array &a)
-        {data = a; grad = af::constant(0, a.dims()); mmt = af::constant(0, a.dims());}
+        {data = a; grad = af::constant(0, a.dims()); velocity  = af::constant(0, a.dims());}
     inline bool is_leaf(void) {return lhs == nullptr && rhs == nullptr;}
     tensor& matmul(tensor &t);
     tensor& log(void);

@@ -63,8 +63,8 @@ static void update_loss_metrics(float loss, float accu, int epoch, bool end)
  *
  * Momentum is a method that helps accelerate SGD in the relevant direction and
  * dampens oscillations. It is implemented by adding a fraction of the gradients
- * of the past time step, stored as t->momentum, to the current gradient. So
- *      t->mmt = momentum * t->mmt + (1-momentum) * t->grad
+ * of the past time step, stored as t->velocity, to the current gradient. So
+ *      t->velocity  = momentum * t->velocity  + (1-momentum) * t->grad
  * https://towardsdatascience.com/stochastic-gradient-descent-with-momentum-a84097641a5d
  */
 void sgd_step(std::vector<tensor*> &params, float lr, float momentum = 0.8, float weight_decay = 0.0)
@@ -74,8 +74,8 @@ void sgd_step(std::vector<tensor*> &params, float lr, float momentum = 0.8, floa
             t->grad += weight_decay * t->data;
 
         if (momentum > 0.0) {
-            t->mmt = momentum * t->mmt + (1-momentum) * t->grad;
-            t->data -= lr * t->mmt;
+            t->velocity  = momentum * t->velocity  + (1-momentum) * t->grad;
+            t->data -= lr * t->velocity ;
         } else
             t->data -= lr * t->grad;
 
