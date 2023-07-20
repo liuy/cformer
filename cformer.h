@@ -116,6 +116,17 @@ static inline array xavier_normal(int in, int out, uint64_t seed = 0, const af::
     return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / (in + out));
 }
 
+typedef void (*data_reader_t)(tensor &tri, tensor &trl, tensor &tei, tensor &tel);
+
+struct data {
+    tensor train_x, train_y, test_x, test_y;
+    data_reader_t data_reader;
+    data(data_reader_t dr) : data_reader(dr) {}
+    inline size_t num_examples(void) { return train_x.data.dims(0); }
+    void load(void)
+    { data_reader(train_x, train_y, test_x, test_y); }
+};
+
 typedef array (*initializer_t)(int, int, const af::dtype);
 
 struct layer {
@@ -146,18 +157,6 @@ struct linear : layer {
     if (!no_bias) bias.assign_data(af::transpose(init(out, 1, t)));}
     //af_print(weight.data); af_print(bias.data);}
     tensor& forward(tensor &x) override;
-};
-
-typedef void (*data_reader_t)(tensor &tri, tensor &trl, tensor &tei, tensor &tel);
-void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &ts_label);
-
-struct data {
-    tensor train_x, train_y, test_x, test_y;
-    data_reader_t data_reader;
-    data(data_reader_t dr) : data_reader(dr) {}
-    inline size_t num_examples(void) { return train_x.data.dims(0); }
-    void load(void)
-    { data_reader(train_x, train_y, test_x, test_y); }
 };
 
 struct seqnet {
@@ -228,5 +227,14 @@ static inline void _af_debug(Args... args)
     fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
     exit(EXIT_FAILURE); \
     } while (0)
+
+// *********************** data functions ***********************
+void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &ts_label);
+
+// ************************ nn functions ************************
+static inline float categorical_accuracy(tensor &y_true, tensor &y_pred)
+{
+    return af::sum<float>(argmax(y_true.data) == argmax(y_pred.data)) / y_true.data.dims(0);
+}
 
 #endif /* CFORMER_H */

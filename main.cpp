@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     model.train(set, 0.0005, 100, 20);
 
     tensor &y_pred = model(set.test_x);
-    float accu = af::sum<float>(argmax(set.test_y.data) == argmax(y_pred.data)) / y_pred.data.dims(0);
-    printf("\nTime used %.1fs, MNIST Test accuracy: %.4f\n", af::timer::stop(t), accu);
+    float accu = categorical_accuracy(set.test_y, y_pred);
+    printf("\nTotal time %.1fs, MNIST Test accuracy: %.4f\n", af::timer::stop(t), accu);
     return 0;
 }

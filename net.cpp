@@ -36,11 +36,10 @@ static tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred, bool fr
     return -(y_true*y_pred.log()).sum(1);
 }
 
-static void update_loss_metrics(float loss, tensor &y_true, tensor &y_pred, int epoch, bool end)
+static void update_loss_metrics(float loss, float accu, int epoch, bool end)
 {
     static std::vector<float> epoch_loss;
     static std::vector<float> epoch_accu;
-    float accu = af::sum<float>(argmax(y_true.data) == argmax(y_pred.data)) / y_true.data.dims(0);
     epoch_loss.push_back(loss);
     epoch_accu.push_back(accu);
 
@@ -72,7 +71,8 @@ void seqnet::train(data &set, float lr, int bacth_size, int epoch)
                 t->grad = 0;
             }
             float batch_loss = af::sum<float>(loss.data) / bacth_size;
-            update_loss_metrics(batch_loss, y_true, y_pred, i, j + bacth_size >= n);
+            float batch_accu = categorical_accuracy(y_true, y_pred);
+            update_loss_metrics(batch_loss, batch_accu, i, j + bacth_size >= n);
             loss.destroy_graph();
         }
     }
