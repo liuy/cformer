@@ -53,6 +53,36 @@ static void update_loss_metrics(float loss, float accu, int epoch, bool end)
     epoch_accu.clear();
 }
 
+/**
+ * Stochastic Gradient Descent (SGD) with momentum and weight decay
+ *
+ * Weight decay is L2 regularization to simplify the complexity of the model
+ * by penalizing large weights. It is implemented by adding a term(w^2) to the loss
+ * function. So
+ *      new_grad = grad + weight_decay * w.
+ *
+ * Momentum is a method that helps accelerate SGD in the relevant direction and
+ * dampens oscillations. It is implemented by adding a fraction of the gradients
+ * of the past time step, stored as t->momentum, to the current gradient. So
+ *      t->mmt = momentum * t->mmt + (1-momentum) * t->grad
+ * https://towardsdatascience.com/stochastic-gradient-descent-with-momentum-a84097641a5d
+ */
+void sgd_step(std::vector<tensor*> &params, float lr, float momentum = 0.8, float weight_decay = 0.0)
+{
+    for (auto t : params) {
+        if (weight_decay > 0.0)
+            t->grad += weight_decay * t->data;
+
+        if (momentum > 0.0) {
+            t->mmt = momentum * t->mmt + (1-momentum) * t->grad;
+            t->data -= lr * t->mmt;
+        } else
+            t->data -= lr * t->grad;
+
+        t->grad = 0;
+    }
+}
+
 void seqnet::train(data &set, float lr, int bacth_size, int epoch)
 {
     size_t n = set.num_examples();
@@ -66,10 +96,7 @@ void seqnet::train(data &set, float lr, int bacth_size, int epoch)
             tensor &loss = categorical_cross_entropy(y_true, y_pred);
 
             loss.backward();
-            for (auto t : params) {
-                t->data -= lr * t->grad;
-                t->grad = 0;
-            }
+            sgd_step(params, lr);
             float batch_loss = af::sum<float>(loss.data) / bacth_size;
             float batch_accu = categorical_accuracy(y_true, y_pred);
             update_loss_metrics(batch_loss, batch_accu, i, j + bacth_size >= n);
