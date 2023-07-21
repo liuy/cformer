@@ -162,6 +162,33 @@ struct linear : layer {
     tensor& forward(tensor &x) override;
 };
 
+struct optimizer {
+    std::vector<tensor*> params;
+    optimizer(std::vector<tensor*> p)
+        : params(p) {}
+    void zero_grad(void) { for (auto p : params) p->zero_grad(); }
+    virtual void step(void) = 0;
+};
+
+struct SGD : optimizer {
+    float lr;
+    float momentum;
+    float weight_decay;
+    SGD(std::vector<tensor*> &p, float l = 1e-4, float m = 0.8, float wd = 0.0)
+        : optimizer(p), lr(l), momentum(m), weight_decay(wd) {}
+    void step(void) override;
+};
+
+typedef tensor& (*loss_fn_t)(tensor &y_true, tensor &y_pred);
+typedef float (*metrics_fn_t)(tensor &y_true, tensor &y_pred);
+struct trainer {
+    int epochs;
+    int batch_size;
+    struct optimizer &optimizer;
+    loss_fn_t loss_fn;
+    metrics_fn_t metrics_fn;
+};
+
 struct seqnet {
     std::vector<tensor*> params;
     std::vector<layer*> layers;
@@ -169,7 +196,7 @@ struct seqnet {
     ~seqnet() { for (auto i : layers) delete i; }
     inline void add(layer *l)
     { layers.push_back(l); params.push_back(&l->weight); if (!l->no_bias) params.push_back(&l->bias); }
-    void train(data &set, float lr = 0.001, int batch_size = 64, int epoch = 10);
+    void train(data &set, trainer &tr);
     tensor& forward(tensor &x);
     inline tensor& operator()(tensor &x) { tensor &r = forward(x); r.forward(); return r; }
 };
@@ -235,9 +262,8 @@ static inline void _af_debug(Args... args)
 void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &ts_label);
 
 // ************************ nn functions ************************
-static inline float categorical_accuracy(tensor &y_true, tensor &y_pred)
-{
-    return af::sum<float>(argmax(y_true.data) == argmax(y_pred.data)) / y_true.data.dims(0);
-}
+
+tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred);
+float categorical_accuracy(tensor &y_true, tensor &y_pred);
 
 #endif /* CFORMER_H */

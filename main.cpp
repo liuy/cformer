@@ -10,8 +10,16 @@ int main(int argc, char* argv[])
     data set(mnist_reader);
     set.load();
     af::timer t = af::timer::start();
+    SGD sgd(model.params, 0.0005, 0.8, 0);
+    trainer tr = {
+        .epochs = 20,
+        .batch_size = 100,
+        .optimizer = sgd,
+        .loss_fn = categorical_cross_entropy,
+        .metrics_fn = categorical_accuracy,
+    };
 
-    model.train(set, 0.0005, 100, 20);
+    model.train(set, tr);
 
     tensor &y_pred = model(set.test_x);
     float accu = categorical_accuracy(set.test_y, y_pred);

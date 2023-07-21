@@ -29,11 +29,14 @@ tensor& seqnet::forward(tensor &x)
     return *y;
 }
 
-static tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred, bool from_logits=false)
+tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred)
 {
-    if (from_logits)
-        return  (y_true * (y_pred.exp().bsum(1).log() - y_pred)).sum(1);
     return -(y_true*y_pred.log()).sum(1);
+}
+
+float categorical_accuracy(tensor &y_true, tensor &y_pred)
+{
+    return af::sum<float>(argmax(y_true.data) == argmax(y_pred.data)) / y_true.data.dims(0);
 }
 
 static void update_loss_metrics(float loss, float accu, int epoch, bool end)
@@ -67,9 +70,9 @@ static void update_loss_metrics(float loss, float accu, int epoch, bool end)
  *      t->velocity  = momentum * t->velocity  + (1-momentum) * t->grad
  * https://towardsdatascience.com/stochastic-gradient-descent-with-momentum-a84097641a5d
  */
-void sgd_step(std::vector<tensor*> &params, float lr, float momentum = 0.8, float weight_decay = 0.0)
+void SGD::step(void)
 {
-    for (auto t : params) {
+    for (auto &t : params) {
         if (weight_decay > 0.0)
             t->grad += weight_decay * t->data;
 
@@ -83,23 +86,23 @@ void sgd_step(std::vector<tensor*> &params, float lr, float momentum = 0.8, floa
     }
 }
 
-void seqnet::train(data &set, float lr, int bacth_size, int epoch)
+void seqnet::train(data &set, trainer &tr)
 {
     size_t n = set.num_examples();
     printf("| Epoch | Time Used | Train Loss | Train Accu |\n");
-    for (int i = 0; i < epoch; i++) {
+    for (int i = 0; i < tr.epochs; i++) {
         af::timer::start();
-        for (int j = 0; j < n; j += bacth_size) {
-            tensor x_batch(set.train_x.data.rows(j, j + bacth_size - 1));
-            tensor y_true(set.train_y.data.rows(j, j + bacth_size - 1));
+        for (int j = 0; j < n; j += tr.batch_size) {
+            tensor x_batch(set.train_x.data.rows(j, j + tr.batch_size - 1));
+            tensor y_true(set.train_y.data.rows(j, j + tr.batch_size- 1));
             tensor &y_pred = forward(x_batch);
-            tensor &loss = categorical_cross_entropy(y_true, y_pred);
+            tensor &loss = tr.loss_fn(y_true, y_pred);
 
             loss.backward();
-            sgd_step(params, lr);
-            float batch_loss = af::sum<float>(loss.data) / bacth_size;
-            float batch_accu = categorical_accuracy(y_true, y_pred);
-            update_loss_metrics(batch_loss, batch_accu, i, j + bacth_size >= n);
+            tr.optimizer.step();
+            float batch_loss = af::sum<float>(loss.data) / tr.batch_size;
+            float batch_accu = tr.metrics_fn(y_true, y_pred);
+            update_loss_metrics(batch_loss, batch_accu, i, j + tr.batch_size >= n);
             loss.destroy_graph();
         }
     }
