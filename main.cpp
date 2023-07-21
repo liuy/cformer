@@ -8,7 +8,9 @@ int main(int argc, char* argv[])
         new linear(100, 10, Softmax),
     };
     data set(mnist_reader);
-    set.load();
+    set.load({
+        //new random_rotate(45),
+    });
     af::timer t = af::timer::start();
     SGD op(model.params, 1e-4, 0.8);
     trainer tr = {

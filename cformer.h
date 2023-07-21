@@ -34,7 +34,7 @@ struct tensor {
     tensor *lhs = nullptr; // left-hand-side of the expression
     int dim = 0;           // parameter of lhs
     tensor *rhs = nullptr; // right-hand-side of the expression
-    oper *op;              // operator of the expression
+    oper *op = nullptr;    // operator of the expression
     bool no_delete = true; // whether to delete the tensor by .destroy_graph()
 
 #define copy_delete(t) data = t.data; grad = t.grad; velocity  = t.velocity ; lhs = t.lhs; rhs = t.rhs; \
@@ -121,13 +121,24 @@ static inline array xavier_normal(int in, int out, uint64_t seed = 0, const af::
 
 typedef void (*data_reader_t)(tensor &tri, tensor &trl, tensor &tei, tensor &tel);
 
+struct transform {
+    virtual array operator()(array &a) = 0;
+    virtual ~transform() = default;
+};
+
+struct random_rotate : transform {
+    float degree;
+    // random rotate image by [-degree, degree] degrees
+    random_rotate(float d) : degree(d) {}
+    array operator()(array &a) override;
+};
+
 struct data {
     tensor train_x, train_y, test_x, test_y;
     data_reader_t data_reader;
     data(data_reader_t dr) : data_reader(dr) {}
     inline size_t num_examples(void) { return train_x.data.dims(0); }
-    void load(void)
-    { data_reader(train_x, train_y, test_x, test_y); }
+    void load(std::initializer_list<transform*> list = {});
 };
 
 typedef array (*initializer_t)(int, int, const af::dtype);

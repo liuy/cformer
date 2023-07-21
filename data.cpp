@@ -53,3 +53,25 @@ void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &
     ts_label.assign_data(a);
 }
 
+array random_rotate::operator()(array &x)
+{
+#define PIf		3.14159265358979323846f
+    return array();
+}
+
+void data::load(std::initializer_list<transform *> transforms)
+{
+    printf("Loading data...");
+    data_reader(train_x, train_y, test_x, test_y);
+    array joint_x = train_x.data;
+    array joint_y = train_y.data;
+    for (auto tf : transforms) {
+        array new_x = (*tf)(train_x.data);
+        joint_x = af::join(0, new_x, joint_x);
+        joint_y = af::join(0, train_y.data, joint_y);
+        delete tf;
+    }
+    train_x.assign_data(joint_x);
+    train_y.assign_data(joint_y);
+    printf("%lld training samples, %lld test samples\n", train_x.data.dims(0), test_x.data.dims(0));
+}
