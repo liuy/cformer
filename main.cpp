@@ -10,9 +10,9 @@ int main(int argc, char* argv[])
     data set(mnist_reader);
     set.load();
     af::timer t = af::timer::start();
-    SGD op(model.params, 5e-4);
+    SGD op(model.params, 1e-4, 0.8);
     trainer tr = {
-        .epochs = 20,
+        .epochs = 21,
         .batch_size = 100,
         .optimizer = op,
         .loss_fn = categorical_cross_entropy,

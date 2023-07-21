@@ -67,7 +67,9 @@ static void update_loss_metrics(float loss, float accu, int epoch, bool end)
  * Momentum is a method that helps accelerate SGD in the relevant direction and
  * dampens oscillations. It is implemented by adding a fraction of the gradients
  * of the past time step, stored as t->velocity, to the current gradient. So
- *      t->velocity  = momentum * t->velocity  + (1-momentum) * t->grad
+ *      t->velocity = momentum * t->velocity + (1-momentum) * t->grad (Andrew NG)
+ *      t->velocity = momentum * t->velocity + t->grad (PyTorch)
+ *      v_lookahead = momentum * v + grad
  * https://towardsdatascience.com/stochastic-gradient-descent-with-momentum-a84097641a5d
  */
 void SGD::step(void)
@@ -80,8 +82,10 @@ void SGD::step(void)
             t->velocity = af::constant(0, t->grad.dims());
 
         if (momentum > 0.0) {
-            t->velocity  = momentum * t->velocity  + (1-momentum) * t->grad;
-            t->data -= lr * t->velocity ;
+            // Andrew NG's version works a little bit better than PyTorch's but we choose pytorch's
+            // version for simplicity (less computation)
+            t->velocity  = momentum * t->velocity  + t->grad;
+            t->data -= nesterov ? lr * (momentum * t->velocity + t->grad) : lr * t->velocity;
         } else
             t->data -= lr * t->grad;
 

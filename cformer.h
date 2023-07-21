@@ -174,8 +174,9 @@ struct SGD : optimizer {
     float lr;
     float momentum;
     float weight_decay;
-    SGD(std::vector<tensor*> &p, float l = 1e-4, float m = 0.8, float wd = 0.0)
-        : optimizer(p), lr(l), momentum(m), weight_decay(wd) {}
+    bool nesterov;
+    SGD(std::vector<tensor*> &p, float l = 1e-4, float m = 0.8, bool n=false, float wd = 0.0)
+        : optimizer(p), lr(l), momentum(m), nesterov(n), weight_decay(wd) {}
     void step(void) override;
     void finish(void) override {for (auto &p : params) {p->velocity = array();}}
 };
