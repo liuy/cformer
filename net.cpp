@@ -107,9 +107,11 @@ void Adam::step(void)
 
         t->mean = beta1 * t->mean + (1 - beta1) * t->grad;
         t->variance = beta2 * t->variance + (1 - beta2) * t->grad * t->grad;
-        array mean_hat = t->mean / (1 - beta1);
-        array variance_hat = t->variance / (1 - beta2);
-        t->data -= lr * mean_hat / (af::sqrt(variance_hat) + epsilon);
+        // array mean_hat = t->mean / (1 - beta1);
+        // array variance_hat = t->variance / (1 - beta2);
+        // t->data -= lr * mean_hat / (af::sqrt(variance_hat) + epsilon);
+        // comment out bias correction for simplicity
+        t->data -= lr * t->mean / (af::sqrt(t->variance) + epsilon);
 
         t->zero_grad();
     }
