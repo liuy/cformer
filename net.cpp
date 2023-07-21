@@ -76,6 +76,9 @@ void SGD::step(void)
         if (weight_decay > 0.0)
             t->grad += weight_decay * t->data;
 
+        if (unlikely(t->velocity.isempty()))
+            t->velocity = af::constant(0, t->grad.dims());
+
         if (momentum > 0.0) {
             t->velocity  = momentum * t->velocity  + (1-momentum) * t->grad;
             t->data -= lr * t->velocity ;
@@ -92,6 +95,11 @@ void Adam::step(void)
     for (auto &t : params) {
         if (weight_decay > 0.0)
             t->grad += weight_decay * t->data;
+
+        if (unlikely(t->mean.isempty()))
+            t->mean = af::constant(0, t->grad.dims());
+        if (unlikely(t->variance.isempty()))
+            t->variance = af::constant(0, t->grad.dims());
 
         t->mean = beta1 * t->mean + (1 - beta1) * t->grad;
         t->variance = beta2 * t->variance + (1 - beta2) * t->grad * t->grad;
@@ -123,4 +131,5 @@ void seqnet::train(data &set, trainer &tr)
             loss.destroy_graph();
         }
     }
+    tr.optimizer.finish();
 }

@@ -10,11 +10,11 @@ int main(int argc, char* argv[])
     data set(mnist_reader);
     set.load();
     af::timer t = af::timer::start();
-    Adam adam(model.params, 0.0005);
+    SGD op(model.params, 5e-4);
     trainer tr = {
         .epochs = 20,
         .batch_size = 100,
-        .optimizer = adam,
+        .optimizer = op,
         .loss_fn = categorical_cross_entropy,
         .metrics_fn = categorical_accuracy,
     };

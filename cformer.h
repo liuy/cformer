@@ -28,9 +28,9 @@ struct oper {
 struct tensor {
     array data = array();  // evaluated data of the tensor
     array grad = array();  // gradient of the tensor
-    array velocity = array();   // velocity of the tensor for SGD with momentum
-    array mean = array();  // first moment of the tensor for Adam
-    array variance = array(); // second moment of the tensor for Adam
+    array velocity = array();   // velocity for SGD with momentum
+    array mean = array();  // first moment for Adam
+    array variance = array(); // second moment for Adam
     tensor *lhs = nullptr; // left-hand-side of the expression
     int dim = 0;           // parameter of lhs
     tensor *rhs = nullptr; // right-hand-side of the expression
@@ -41,8 +41,7 @@ struct tensor {
         dim = t.dim; op = t.op; if (!t.no_delete) delete &t;
 
     tensor() = default;
-    tensor(const array &a) : data(a), grad(af::constant(0, a.dims())), velocity(af::constant(0, a.dims())),
-        mean(af::constant(0, a.dims())), variance(af::constant(0, a.dims())) {} // for leaf tensor
+    tensor(const array &a) : data(a), grad(af::constant(0, a.dims())) {} // for leaf tensor
     tensor(const tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
         : lhs(a), rhs(b), op(o), no_delete(false) {}
@@ -73,9 +72,7 @@ struct tensor {
     void destroy_graph(void);
     void print_graph(void);
     inline void zero_grad(void) {grad = 0;}
-    inline void assign_data(const array &a)
-        {data = a; grad = af::constant(0, a.dims()); velocity  = af::constant(0, a.dims());
-         mean = af::constant(0, a.dims()); variance = af::constant(0, a.dims());}
+    inline void assign_data(const array &a){data = a; grad = af::constant(0, a.dims());}
     inline bool is_leaf(void) {return lhs == nullptr && rhs == nullptr;}
     tensor& matmul(tensor &t);
     tensor& log(void);
@@ -169,8 +166,8 @@ struct optimizer {
     std::vector<tensor*> params;
     optimizer(std::vector<tensor*> p)
         : params(p) {}
-    void zero_grad(void) { for (auto p : params) p->zero_grad(); }
     virtual void step(void) = 0;
+    virtual void finish(void) = 0;
 };
 
 struct SGD : optimizer {
@@ -180,6 +177,7 @@ struct SGD : optimizer {
     SGD(std::vector<tensor*> &p, float l = 1e-4, float m = 0.8, float wd = 0.0)
         : optimizer(p), lr(l), momentum(m), weight_decay(wd) {}
     void step(void) override;
+    void finish(void) override {for (auto &p : params) {p->velocity = array();}}
 };
 
 struct Adam : optimizer {
@@ -191,6 +189,7 @@ struct Adam : optimizer {
     Adam(std::vector<tensor*> &p, float l = 1e-4, float wd =0.0, float b1 = 0.9, float b2 = 0.999, float e = 1e-8)
         : optimizer(p), lr(l), weight_decay(wd), beta1(b1), beta2(b2), epsilon(e) {}
     void step(void) override;
+    void finish(void) override {for (auto &p : params) {p->mean = array(); p->variance = array();}}
 };
 
 typedef tensor& (*loss_fn_t)(tensor &y_true, tensor &y_pred);
@@ -271,6 +270,9 @@ static inline void _af_debug(Args... args)
     fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
     exit(EXIT_FAILURE); \
     } while (0)
+
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
 
 // *********************** data functions ***********************
 void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &ts_label);
