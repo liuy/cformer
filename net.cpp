@@ -82,7 +82,24 @@ void SGD::step(void)
         } else
             t->data -= lr * t->grad;
 
-        t->grad = 0;
+        t->zero_grad();
+    }
+}
+
+// For more details, see https://arxiv.org/abs/1412.6980
+void Adam::step(void)
+{
+    for (auto &t : params) {
+        if (weight_decay > 0.0)
+            t->grad += weight_decay * t->data;
+
+        t->mean = beta1 * t->mean + (1 - beta1) * t->grad;
+        t->variance = beta2 * t->variance + (1 - beta2) * t->grad * t->grad;
+        array mean_hat = t->mean / (1 - beta1);
+        array variance_hat = t->variance / (1 - beta2);
+        t->data -= lr * mean_hat / (af::sqrt(variance_hat) + epsilon);
+
+        t->zero_grad();
     }
 }
 

@@ -29,6 +29,8 @@ struct tensor {
     array data = array();  // evaluated data of the tensor
     array grad = array();  // gradient of the tensor
     array velocity = array();   // velocity of the tensor for SGD with momentum
+    array mean = array();  // first moment of the tensor for Adam
+    array variance = array(); // second moment of the tensor for Adam
     tensor *lhs = nullptr; // left-hand-side of the expression
     int dim = 0;           // parameter of lhs
     tensor *rhs = nullptr; // right-hand-side of the expression
@@ -39,8 +41,8 @@ struct tensor {
         dim = t.dim; op = t.op; if (!t.no_delete) delete &t;
 
     tensor() = default;
-    tensor(const array &a) : data(a), grad(af::constant(0, a.dims())),
-        velocity (af::constant(0, a.dims())) {} // for leaf tensor
+    tensor(const array &a) : data(a), grad(af::constant(0, a.dims())), velocity(af::constant(0, a.dims())),
+        mean(af::constant(0, a.dims())), variance(af::constant(0, a.dims())) {} // for leaf tensor
     tensor(const tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
         : lhs(a), rhs(b), op(o), no_delete(false) {}
@@ -72,7 +74,8 @@ struct tensor {
     void print_graph(void);
     inline void zero_grad(void) {grad = 0;}
     inline void assign_data(const array &a)
-        {data = a; grad = af::constant(0, a.dims()); velocity  = af::constant(0, a.dims());}
+        {data = a; grad = af::constant(0, a.dims()); velocity  = af::constant(0, a.dims());
+         mean = af::constant(0, a.dims()); variance = af::constant(0, a.dims());}
     inline bool is_leaf(void) {return lhs == nullptr && rhs == nullptr;}
     tensor& matmul(tensor &t);
     tensor& log(void);
@@ -176,6 +179,17 @@ struct SGD : optimizer {
     float weight_decay;
     SGD(std::vector<tensor*> &p, float l = 1e-4, float m = 0.8, float wd = 0.0)
         : optimizer(p), lr(l), momentum(m), weight_decay(wd) {}
+    void step(void) override;
+};
+
+struct Adam : optimizer {
+    float lr;
+    float beta1;
+    float beta2;
+    float epsilon;
+    float weight_decay;
+    Adam(std::vector<tensor*> &p, float l = 1e-4, float wd =0.0, float b1 = 0.9, float b2 = 0.999, float e = 1e-8)
+        : optimizer(p), lr(l), weight_decay(wd), beta1(b1), beta2(b2), epsilon(e) {}
     void step(void) override;
 };
 
