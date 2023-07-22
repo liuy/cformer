@@ -1,6 +1,6 @@
 #include "cformer.h"
 
-static array read_mnist_images(const std::string& path)
+static array read_mnist_images(const std::string& path, size_t &nrow, size_t &ncol)
 {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open())
@@ -20,6 +20,9 @@ static array read_mnist_images(const std::string& path)
     std::vector<uint8_t> images(num_images * num_rows * num_cols);
     read_data(file, images.data(), images.size());
 
+    nrow = num_rows;
+    ncol = num_cols;
+    // array is column-majored, so we need to transpose it as layers expect row-majored array
     return array(num_cols*num_rows, num_images, images.data()).T() / 255.0f;
 }
 
@@ -41,33 +44,59 @@ static array read_mnist_labels(const std::string& path)
     return onehot(array(num_labels, images.data()));
 }
 
-void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &ts_label)
+// Note array is column-majored, so we need to transpose it before calling this function
+void write_mnist_images(const array &a, const std::string& path)
 {
-    array a = read_mnist_images("data/mnist/train-images-idx3-ubyte");
-    tr_input.assign_data(a);
-    a = read_mnist_labels("data/mnist/train-labels-idx1-ubyte");
-    tr_label.assign_data(a);
-    a = read_mnist_images("data/mnist/t10k-images-idx3-ubyte");
-    ts_input.assign_data(a);
-    a = read_mnist_labels("data/mnist/t10k-labels-idx1-ubyte");
-    ts_label.assign_data(a);
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open())
+        panic("Cannot open file: %s", path.c_str());
+    std::vector<uint8_t> images(a.elements() + 16); // header has 16 bytes
+    (a * 255).as(u8).host(images.data() + 16);
+    write_data(file, images.data(), images.size());
 }
 
-array random_rotate::operator()(array &x)
+void mnist_reader(struct data &d)
+{
+    size_t rows, cols;
+    array a = read_mnist_images("data/mnist/train-images-idx3-ubyte", d.nrow, d.ncol);
+    d.train_x.assign_data(a);
+    a = read_mnist_labels("data/mnist/train-labels-idx1-ubyte");
+    d.train_y.assign_data(a);
+    a = read_mnist_images("data/mnist/t10k-images-idx3-ubyte", rows, cols);
+    d.test_x.assign_data(a);
+    a = read_mnist_labels("data/mnist/t10k-labels-idx1-ubyte");
+    d.test_y.assign_data(a);
+}
+
+/**
+ * af::rotate() expects images with shape (width, height, batch_size).
+ * Tensor is shaped as (batch_size, width*height), so we need to reshape it to
+ * (width, height, batch_size). After calling rotate, reshape it back to
+ * (batch_size, width*height).
+ */
+array random_rotate::operator()(const array &x, struct data &d)
 {
 #define PIf		3.14159265358979323846f
-    return array();
+    size_t batch_size = x.dims(0);
+    array r(batch_size, d.nrow * d.ncol);
+    for (size_t i = 0; i < batch_size; i++) {
+        array img = af::moddims(x.row(i), d.nrow, d.ncol);
+        float angle = random(-degree, degree) * PIf / 180.0f;
+        r.row(i) = af::moddims(af::rotate(img, angle), 1, d.nrow * d.ncol);
+    }
+    //write_mnist_images(r.T(), "mnist_rr_images");
+    return r;
 }
 
 void data::load(std::initializer_list<transform *> transforms)
 {
     printf("Loading data...");
-    data_reader(train_x, train_y, test_x, test_y);
+    data_reader(*this);
     array joint_x = train_x.data;
     array joint_y = train_y.data;
     for (auto tf : transforms) {
-        array new_x = (*tf)(train_x.data);
-        joint_x = af::join(0, new_x, joint_x);
+        array new_x = (*tf)(train_x.data, *this);
+        joint_x = af::join(0, joint_x, new_x);
         joint_y = af::join(0, train_y.data, joint_y);
         delete tf;
     }

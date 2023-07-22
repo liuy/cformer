@@ -120,22 +120,23 @@ static inline array xavier_normal(int in, int out, uint64_t seed = 0, const af::
     return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / (in + out));
 }
 
-typedef void (*data_reader_t)(tensor &tri, tensor &trl, tensor &tei, tensor &tel);
+typedef void (*data_reader_t)(struct data &);
 
 struct transform {
-    virtual array operator()(array &a) = 0;
+    virtual array operator()(const array &a, struct data &d) = 0;
     virtual ~transform() = default;
 };
 
+// random rotate image by [-degree, degree] degrees
 struct random_rotate : transform {
     float degree;
-    // random rotate image by [-degree, degree] degrees
     random_rotate(float d) : degree(d) {}
-    array operator()(array &a) override;
+    array operator()(const array &a, struct data &d) override;
 };
 
 struct data {
     tensor train_x, train_y, test_x, test_y;
+    size_t nrow, ncol; // for images
     data_reader_t data_reader;
     data(data_reader_t dr) : data_reader(dr) {}
     inline size_t num_examples(void) { return train_x.data.dims(0); }
@@ -187,7 +188,7 @@ struct SGD : optimizer {
     float momentum;
     float weight_decay;
     bool nesterov;
-    SGD(std::vector<tensor*> &p, float l = 1e-4, float m = 0.8, bool n=false, float wd = 0.0)
+    SGD(std::vector<tensor*> &p, float l = 5e-4, float m = 0.8, bool n=false, float wd = 0.0)
         : optimizer(p), lr(l), momentum(m), nesterov(n), weight_decay(wd) {}
     void step(void) override;
     void finish(void) override {for (auto &p : params) {p->velocity = array();}}
@@ -238,6 +239,11 @@ static inline int32_t read_i32(std::ifstream &file)
 static inline void read_data(std::ifstream &file, void *data, size_t size)
 {
     file.read(reinterpret_cast<char*>(data), size);
+}
+
+static inline void write_data(std::ofstream &file, void *data, size_t size)
+{
+    file.write(reinterpret_cast<char*>(data), size);
 }
 
 
@@ -304,8 +310,9 @@ static inline int random(int from, int to)
 //     return dis(e);
 // }
 
-// *********************** data functions ***********************
-void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &ts_label);
+// *********************** data/ functions ***********************
+void mnist_reader(struct data &);
+void write_mnist_images(const array &x, const std::string& path);
 
 // ************************ nn functions ************************
 

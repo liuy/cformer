@@ -9,32 +9,21 @@ int main(int argc, char* argv[])
     };
     data set(mnist_reader);
     set.load({
-        //new random_rotate(45),
+        new random_rotate(30),
     });
-    //af::timer t = af::timer::start();
-    SGD op(model.params, 5e-4, 0.8);
+    af::timer t = af::timer::start();
+    SGD op(model.params, 2e-4);
     trainer tr = {
-        .epochs = 28,
+        .epochs = 20,
         .batch_size = 100,
         .optimizer = op,
         .loss_fn = categorical_cross_entropy,
         .metrics_fn = categorical_accuracy,
     };
+    model.train(set, tr);
 
-    af::timer t = af::timer::start();
-    std::map<int, int> hist;
-    for (int n = 0; n < 100000; ++n)
-        ++hist[random(-10,10)];
-
-    for (auto p : hist) {
-        std::cout << std::fixed << std::setprecision(1) << std::setw(2)
-                  << p.first << ' ' << std::string(p.second/200, '*') << '\n';
-    }
-    printf("\n Total time %.8fs\n", af::timer::stop(t));
-    // model.train(set, tr);
-
-    // tensor &y_pred = model(set.test_x);
-    // float accu = categorical_accuracy(set.test_y, y_pred);
-    // printf("\nTotal time %.1fs, MNIST Test accuracy: %.4f\n", af::timer::stop(t), accu);
+    tensor &y_pred = model(set.test_x);
+    float accu = categorical_accuracy(set.test_y, y_pred);
+    printf("\nTotal time %.1fs, MNIST Test accuracy: %.4f\n", af::timer::stop(t), accu);
     return 0;
 }
