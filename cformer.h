@@ -287,6 +287,23 @@ static inline void _af_debug(Args... args)
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
+static inline int random(int from, int to)
+{
+    static bool start = true;
+    if (unlikely(start)) {
+        std::srand(std::time(nullptr));
+        start = false;
+    }
+    return std::rand()%(to-from + 1) + from;
+}
+
+// static inline int random(int from, int to)
+// {
+//     static std::default_random_engine e(std::time(nullptr));
+//     static std::uniform_int_distribution<> dis(from, to);
+//     return dis(e);
+// }
+
 // *********************** data functions ***********************
 void mnist_reader(tensor &tr_input, tensor &tr_label, tensor &ts_input, tensor &ts_label);
 
