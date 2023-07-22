@@ -119,8 +119,12 @@ static array fwd_bsum(tensor *a, tensor *dummy)
 // dx = ones(d, d) @ y.grad if dim = 0, d = x.dims[0]
 static void bwd_bsum(tensor *a, tensor *dummy, array &grad)
 {
+    // af::dim4 dims = {1, 1, 1, 1};
+    // dims[a->dim] = a->data.dims(a->dim);
+    // update_grad(a, af::tile(af::sum(grad, a->dim), dims));
     array t;
     int d = a->data.dims(a->dim);
+
     if (a->dim == 0)
         t = af::matmul(af::constant(1, d, d), grad);
     else if (a->dim == 1)
@@ -190,6 +194,28 @@ static void bwd_bdim0(tensor *a, tensor *b, array &grad)
     update_grad(a, af::sum(grad, 0));
 }
 
+// Suppport dim=1 right now, TODO: need refine onehot to support more dims
+static array fwd_bmax(tensor *a, tensor *dummy)
+{
+    assert(a->dim == 1);
+    af::dim4 dims = {1, 1, 1, 1};
+    dims[a->dim] = a->data.dims(a->dim);
+    return af::tile(af::max(a->data, a->dim),dims);
+}
+
+// y = bmax(x) => dx = bsum(dy) * onehot(max_idx)
+static void bwd_bmax(tensor *a, tensor *dummpy, array &grad)
+{
+    auto bsum = [](array &a, int dim) {
+        af::dim4 dims = { 1, 1, 1, 1 };
+        dims[dim] = a.dims(dim);
+        return af::tile(af::sum(a, dim), dims);
+    };
+    array dummy, idx;
+    af::max(dummy, idx, a->data, a->dim);
+    update_grad(a, bsum(grad, a->dim) * onehot(idx, grad.dims(a->dim)));
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -205,6 +231,7 @@ OPERATOR(tanh);
 OPERATOR(bsum);
 OPERATOR(sum);
 OPERATOR(bdim0);
+OPERATOR(bmax);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
     { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
@@ -222,6 +249,7 @@ METHOD(tanh, void, nullptr, tanh)
 METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
 METHOD(sum, int dim, nullptr, sum, this->dim = dim)
 METHOD(bdim0, tensor &t, &t, bdim0)
+METHOD(bmax, int dim, nullptr, bmax, this->dim = dim)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)

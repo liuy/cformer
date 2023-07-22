@@ -193,3 +193,17 @@ TEST(Tensor, log)
     log.forward();
     EXPECT_FLOAT_EQ(first(log.data), -27.631021f);
 }
+
+TEST(Tensor, bmax)
+{
+    af::dim4 d={2,3};
+    tensor a(array(d, {0.6009535f,0.0277588f,0.9805506f,0.2126322f,0.0654638f,0.5496738f}));
+    tensor b(af::constant(2,2,3));
+    tensor &m = b * a.bmax(1);
+    m.backward();
+    array_eq(m.data, {1.9611012f, 1.0993476f, 1.9611012f, 1.0993476f, 1.9611012f, 1.0993476f});
+    array_eq(a.grad, {0.0f,0.0f,6.0f,0.0f,0.0f,6.0f});
+    array_eq(b.grad, {0.9805506f,0.5496738f,0.9805506f,0.5496738f,0.9805506f,0.5496738f});
+
+    m.destroy_graph();
+}

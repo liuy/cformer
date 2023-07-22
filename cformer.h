@@ -85,6 +85,7 @@ struct tensor {
     tensor& bsum(int);
     tensor& sum(int);
     tensor& bdim0(tensor &t);
+    tensor& bmax(int);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);

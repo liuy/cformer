@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     af::timer t = af::timer::start();
     SGD op(model.params, 1e-4, 0.8);
     trainer tr = {
-        .epochs = 21,
+        .epochs = 25,
         .batch_size = 100,
         .optimizer = op,
         .loss_fn = categorical_cross_entropy,
