@@ -1,5 +1,11 @@
 #include "cformer.h"
 
+tensor& softmax(tensor &x)
+{
+    tensor &exp = (x - x.bmax(1)).exp();
+    return exp/exp.bsum(1);
+}
+
 tensor& linear::forward(tensor &x)
 {
     tensor &y = x.matmul(weight);
@@ -13,7 +19,7 @@ tensor& linear::forward(tensor &x)
     case Tanh:
         return y.tanh();
     case Softmax:
-        return y.exp()/y.exp().bsum(1);
+        return softmax(y);
     case None:
         return y;
     default:
@@ -51,7 +57,7 @@ static void update_loss_metrics(float loss, float accu, int epoch, bool end)
 
     float avg_loss = std::accumulate(epoch_loss.begin(), epoch_loss.end(), 0.0) / epoch_loss.size();
     float avg_accu = std::accumulate(epoch_accu.begin(), epoch_accu.end(), 0.0) / epoch_accu.size();
-    printf("| %-5d | %-9.1f | %-10.5f | %-10.5f |\n", epoch, af::timer::stop(), avg_loss, avg_accu);
+    printf("| %-5d | %-9.1f | %-10.8f | %-10.8f |\n", epoch, af::timer::stop(), avg_loss, avg_accu);
     epoch_loss.clear();
     epoch_accu.clear();
 }
