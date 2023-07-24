@@ -130,7 +130,8 @@ struct transform {
 // random rotate image by [-degree, degree] degrees
 struct random_rotate : transform {
     float degree;
-    random_rotate(float d) : degree(d) {}
+    float ratio;
+    random_rotate(float d, float r=0.3f) : degree(d), ratio(r) {}
     array operator()(const array &a, struct data &d) override;
 };
 

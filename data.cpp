@@ -77,7 +77,7 @@ void mnist_reader(struct data &d)
 array random_rotate::operator()(const array &x, struct data &d)
 {
 #define PIf		3.14159265358979323846f
-    size_t batch_size = x.dims(0);
+    size_t batch_size = x.dims(0) * ratio;
     array r(batch_size, d.nrow * d.ncol);
     for (size_t i = 0; i < batch_size; i++) {
         array img = af::moddims(x.row(i), d.nrow, d.ncol);
