@@ -146,22 +146,24 @@ struct data {
 
 typedef array (*initializer_t)(int, int, const af::dtype);
 
+static const char *activ_name[] = {"None", "ReLU", "Sigmoid", "Tanh", "Softmax"};
+enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax};
+
 struct layer {
+    const char *name;
     bool no_bias;
     tensor weight, bias;
+    activ_t act;
+    int input, output;
     virtual ~layer() = default;
     virtual tensor& forward(tensor &x) = 0;
     inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
 };
 
-enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax};
-
 struct linear : layer {
-    activ_t act;
     initializer_t init;
-
     linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
-        : act(a), init(a == ReLU ? kaiming_uniform : xavier_uniform)
+        : init(a == ReLU ? kaiming_uniform : xavier_uniform)
     /** Notes on bias initialization:
      * Generally, there are 4 recommended ways to initialize the bias:
      * 1. use weight initializer (default for this layer)
@@ -170,7 +172,7 @@ struct linear : layer {
      * 4. just any small random value
      * You can actually set layer.bias directly if you want to override the default.
      */
-    {no_bias = nb; weight.assign_data(init(in, out, t));
+    {name = "Linear"; input = in; output = out; act = a; no_bias = nb; weight.assign_data(init(in, out, t));
     if (!no_bias) bias.assign_data(af::transpose(init(out, 1, t)));}
     //af_print(weight.data); af_print(bias.data);}
     tensor& forward(tensor &x) override;
@@ -218,6 +220,7 @@ struct trainer {
 };
 
 struct seqnet {
+    const char *name = "Sequential Network";
     std::vector<tensor*> params;
     std::vector<layer*> layers;
     seqnet(std::initializer_list<layer*> list) { for (auto i : list) add(i); }
@@ -227,6 +230,7 @@ struct seqnet {
     void train(data &set, trainer &tr);
     tensor& forward(tensor &x);
     inline tensor& operator()(tensor &x) { tensor &r = forward(x); r.forward(); return r; }
+    void summary(void);
 };
 
 // ********************** helper functions **********************

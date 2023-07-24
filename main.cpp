@@ -20,6 +20,7 @@ int main(int argc, char* argv[])
         .loss_fn = categorical_cross_entropy,
         .metrics_fn = categorical_accuracy,
     };
+    model.summary();
     model.train(set, tr);
 
     tensor &y_pred = model(set.test_x);

@@ -145,3 +145,29 @@ void seqnet::train(data &set, trainer &tr)
     }
     tr.optimizer.finish();
 }
+
+void seqnet::summary(void)
+{
+    int i = 0;
+    size_t total_params = 0;
+    printf("\n%s:\n", name);
+    printf("+-------+---------+-------+--------+------+------------+------------+\n");
+    printf("| Layer | Name    | Input | Output | Bias | Activation | Parameters |\n");
+    printf("+-------+---------+-------+--------+------+------------+------------+\n");
+    auto param_num = [](layer *l) {
+            if (l->no_bias)
+                return l->weight.data.elements();
+            return l->weight.data.elements() + l->bias.data.elements();
+        };
+    for (auto layer : layers) {
+        size_t np = param_num(layer);
+        total_params += np;
+        printf("| %-5d | %-7s | %-5d | %-6d | %-4s | %-10s | %-'10ld |\n", i++, layer->name, layer->input, layer->output,
+            layer->no_bias ? "None" : "Yes", activ_name[layer->act], np);
+    }
+    printf("+-------------------------------------------------------------------+\n");
+    printf("Total params: %ld\n", total_params);
+    printf("Running on:\n");
+    af::info();
+    printf("\n");
+}
