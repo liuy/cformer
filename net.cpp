@@ -84,10 +84,10 @@ void SGD::step(void)
         if (weight_decay > 0.0)
             t->grad += weight_decay * t->data;
 
-        if (unlikely(t->velocity.isempty()))
-            t->velocity = af::constant(0, t->grad.dims());
-
         if (momentum > 0.0) {
+            if (unlikely(t->velocity.isempty()))
+                t->velocity = af::constant(0, t->grad.dims());
+
             // Andrew NG's version works a little bit better than PyTorch's but we choose pytorch's
             // version for simplicity (less computation)
             t->velocity  = momentum * t->velocity  + t->grad;

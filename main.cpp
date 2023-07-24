@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
     };
     data set(mnist_reader);
     set.load({
-        new random_rotate(30),
+        new random_rotate(30,1),
     });
     af::timer t = af::timer::start();
     SGD op(model.params, 2e-4);
