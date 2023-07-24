@@ -119,19 +119,9 @@ static array fwd_bsum(tensor *a, tensor *dummy)
 // dx = ones(d, d) @ y.grad if dim = 0, d = x.dims[0]
 static void bwd_bsum(tensor *a, tensor *dummy, array &grad)
 {
-    // af::dim4 dims = {1, 1, 1, 1};
-    // dims[a->dim] = a->data.dims(a->dim);
-    // update_grad(a, af::tile(af::sum(grad, a->dim), dims));
-    array t;
-    int d = a->data.dims(a->dim);
-
-    if (a->dim == 0)
-        t = af::matmul(af::constant(1, d, d), grad);
-    else if (a->dim == 1)
-        t = af::matmul(grad, af::constant(1, d, d));
-    else
-        panic("dim must be 0 or 1, but got %d", a->dim);
-    update_grad(a, t);
+    af::dim4 dims = {1, 1, 1, 1};
+    dims[a->dim] = a->data.dims(a->dim);
+    update_grad(a, af::tile(af::sum(grad, a->dim), dims));
 }
 
 static array fwd_sigmoid(tensor *a, tensor *dummy)
