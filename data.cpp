@@ -122,6 +122,7 @@ array elastic_transform::operator()(const array &x, struct data &d)
 void data::load(std::initializer_list<transform *> transforms)
 {
     printf("Loading data...");
+    af::timer::start();
     data_reader(*this);
     array joint_x = train_x.data;
     array joint_y = train_y.data;
@@ -134,7 +135,8 @@ void data::load(std::initializer_list<transform *> transforms)
     train_x.assign_data(joint_x);
     train_y.assign_data(joint_y);
 
-    printf("%lld training samples, %lld test samples\n", train_x.data.dims(0), test_x.data.dims(0));
+    printf("%lld training samples, %lld test samples (Used %.1fs)\n",
+           train_x.data.dims(0), test_x.data.dims(0), af::timer::stop());
 }
 
 void data::init_train_idx(size_t batch_size)
