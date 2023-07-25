@@ -45,7 +45,7 @@ float categorical_accuracy(tensor &y_true, tensor &y_pred)
     return af::sum<float>(argmax(y_true.data) == argmax(y_pred.data)) / y_true.data.dims(0);
 }
 
-static void update_loss_metrics(float loss, float accu, int epoch, bool end)
+static inline void update_loss_metrics(float loss, float accu, int epoch, bool end)
 {
     static std::vector<float> epoch_loss;
     static std::vector<float> epoch_accu;
@@ -137,7 +137,7 @@ void seqnet::train(data &set, trainer &tr)
 
             loss.backward();
             tr.optimizer.step();
-            float batch_loss = af::sum<float>(loss.data) / tr.batch_size;
+            float batch_loss = af::mean<float>(loss.data);
             float batch_accu = tr.metrics_fn(y_true, y_pred);
             update_loss_metrics(batch_loss, batch_accu, i, j + tr.batch_size >= n);
             loss.destroy_graph();
