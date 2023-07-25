@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
     SGD op(model.params, 2e-4);
     trainer tr = {
         .epochs = 20,
-        .batch_size = 100,
+        .batch_size = 256,
         .optimizer = op,
         .loss_fn = categorical_cross_entropy,
         .metrics_fn = categorical_accuracy,

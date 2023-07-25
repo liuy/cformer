@@ -102,5 +102,20 @@ void data::load(std::initializer_list<transform *> transforms)
     }
     train_x.assign_data(joint_x);
     train_y.assign_data(joint_y);
+
     printf("%lld training samples, %lld test samples\n", train_x.data.dims(0), test_x.data.dims(0));
+}
+
+void data::init_train_idx(size_t batch_size)
+{
+    train_idx.resize(DIV_ROUND_UP(train_x.data.dims(0), batch_size));
+    std::iota(train_idx.begin(), train_idx.end(), 0);
+}
+
+void data::get_mini_batch(tensor &x, tensor &y, size_t idx, size_t batch_size)
+{
+    size_t start = idx * batch_size;
+    size_t end = MIN(start + batch_size, train_x.data.dims(0));
+    x.assign_data(train_x.data.rows(start, end - 1));
+    y.assign_data(train_y.data.rows(start, end - 1));
 }

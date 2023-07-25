@@ -136,12 +136,18 @@ struct random_rotate : transform {
 };
 
 struct data {
+    std::vector<size_t> train_idx;
     tensor train_x, train_y, test_x, test_y;
     size_t nrow, ncol; // for images
+    bool shuffle;
     data_reader_t data_reader;
-    data(data_reader_t dr) : data_reader(dr) {}
+    data(data_reader_t dr, bool shf = true) : data_reader(dr), shuffle(shf) {}
     inline size_t num_examples(void) { return train_x.data.dims(0); }
     void load(std::initializer_list<transform*> list = {});
+    void init_train_idx(size_t batch_size);
+    void get_mini_batch(tensor &x, tensor &y, size_t idx, size_t batch_size);
+    inline void shuffle_train_idx(void) {
+        std::shuffle(train_idx.begin(), train_idx.end(), std::default_random_engine());}
 };
 
 typedef array (*initializer_t)(int, int, const af::dtype);
@@ -211,8 +217,8 @@ struct Adam : optimizer {
 typedef tensor& (*loss_fn_t)(tensor &y_true, tensor &y_pred);
 typedef float (*metrics_fn_t)(tensor &y_true, tensor &y_pred);
 struct trainer {
-    int epochs;
-    int batch_size;
+    size_t epochs;
+    size_t batch_size;
     struct optimizer &optimizer;
     loss_fn_t loss_fn;
     metrics_fn_t metrics_fn;
@@ -306,6 +312,10 @@ static inline int random(int from, int to)
     }
     return std::rand()%(to-from + 1) + from;
 }
+
+#define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 // static inline int random(int from, int to)
 // {
