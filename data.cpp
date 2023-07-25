@@ -88,6 +88,37 @@ array random_rotate::operator()(const array &x, struct data &d)
     return r;
 }
 
+array elastic_transform::operator()(const array &x, struct data &d)
+{
+    size_t batch_size = x.dims(0) * ratio;
+    array r(batch_size, d.nrow * d.ncol);
+    for (size_t i = 0; i < batch_size; i++) {
+        array img = af::moddims(x.row(i), d.nrow, d.ncol);
+
+        // Generate random displacement fields
+        af::array x_disp = af::randn(d.nrow, d.ncol) * alpha;
+        af::array y_disp = af::randn(d.nrow, d.ncol) * alpha;
+
+        // Smooth displacement fields
+        af::array kernel = af::gaussianKernel(6, 6, sigma, sigma);
+        x_disp = af::convolve(x_disp, kernel);
+        y_disp = af::convolve(y_disp, kernel);
+
+        // Generate grid coordinates
+        af::array x_coords = af::tile(af::range(d.nrow), 1, d.ncol);
+        af::array y_coords = af::tile(af::range(d.ncol), 1, d.nrow).T();
+
+        // Add displacement fields to grid coordinates
+        x_coords += x_disp;
+        y_coords += y_disp;
+
+        // Interpolate input using grid coordinates
+        r.row(i) = af::moddims(af::approx2(img, x_coords, y_coords, AF_INTERP_BILINEAR), 1, d.nrow * d.ncol);
+    }
+    //write_mnist_images(r.T(), "mnist_et_images");
+    return r;
+}
+
 void data::load(std::initializer_list<transform *> transforms)
 {
     printf("Loading data...");

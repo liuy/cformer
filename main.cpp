@@ -9,13 +9,14 @@ int main(int argc, char* argv[])
     };
     data set(mnist_reader);
     set.load({
-        new random_rotate(30,1),
+        new random_rotate(30),
+        new elastic_transform(),
     });
     af::timer t = af::timer::start();
     SGD op(model.params, 2e-4);
     trainer tr = {
         .epochs = 20,
-        .batch_size = 256,
+        .batch_size = 512,
         .optimizer = op,
         .loss_fn = categorical_cross_entropy,
         .metrics_fn = categorical_accuracy,

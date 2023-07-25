@@ -131,7 +131,20 @@ struct transform {
 struct random_rotate : transform {
     float degree;
     float ratio;
-    random_rotate(float d, float r=0.3f) : degree(d), ratio(r) {}
+    random_rotate(float d, float r=1.0f) : degree(d), ratio(r) {}
+    array operator()(const array &a, struct data &d) override;
+};
+
+/**
+ * Randomly transforms the morphology of objects in images and produces a see-through-water-like effect.
+ * @alpha – Magnitude of displacements.
+ * @sigma – Smoothness of displacements.
+ */
+struct elastic_transform : transform {
+    float alpha;
+    float sigma;
+    float ratio;
+    elastic_transform(float a = 5.0, float s = 4.0, float r=0.5) : alpha(a), sigma(s), ratio(r) {}
     array operator()(const array &a, struct data &d) override;
 };
 
