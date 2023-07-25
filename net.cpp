@@ -162,10 +162,11 @@ void seqnet::summary(void)
     for (auto layer : layers) {
         size_t np = param_num(layer);
         total_params += np;
-        printf("| %-5d | %-7s | %-5d | %-6d | %-4s | %-10s | %-'10ld |\n", i++, layer->name, layer->input, layer->output,
-            layer->no_bias ? "None" : "Yes", activ_name[layer->act], np);
+        printf("| %-5d | %-7s | %-5lld | %-6lld | %-4s | %-10s | %-'10ld |\n", i++, layer->name,
+            layer->weight.data.dims(0), layer->weight.data.dims(1), layer->no_bias ? "None" : "Yes",
+            activ_name[layer->act], np);
     }
-    printf("+-------------------------------------------------------------------+\n");
+    printf("+-------+---------+-------+--------+------+------------+------------+\n");
     printf("Total params: %ld\n", total_params);
     printf("Running on:\n");
     af::info();
