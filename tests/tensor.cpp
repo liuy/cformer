@@ -20,10 +20,10 @@ static inline void array_eq(const array &a, const array &b)
 
 TEST(Tensor, add_sub_mul_div)
 {
-    tensor a(af::constant(1, 1, 3));
-    tensor b(af::constant(2, 1, 3));
-    tensor c(af::constant(3, 1, 3));
-    tensor d(af::constant(4, 1, 3));
+    tensor a(af::constant(1, 1, 3), true);
+    tensor b(af::constant(2, 1, 3), true);
+    tensor c(af::constant(3, 1, 3), true);
+    tensor d(af::constant(4, 1, 3), true);
     tensor &y = a * b;
     tensor &z = (y - d) / (y + c);
     z.backward();
@@ -42,9 +42,9 @@ static tensor& softmax(tensor &x, int dim)
 
 TEST(Tensor, exp_bsum)
 {
-    tensor a(af::randu(2, 3));
-    tensor b(af::randu(2, 3));
-    tensor c(af::randu(2, 3));
+    tensor a(af::randu(2, 3), true);
+    tensor b(af::randu(2, 3), true);
+    tensor c(af::randu(2, 3), true);
 
     tensor &y = softmax(b-a*c, 1);
     y.backward();
@@ -70,9 +70,9 @@ TEST(Tensor, relu_tanh_sigmoid)
 {
     af::setSeed(0);
 
-    tensor a(af::constant(2, 1, 3));
-    tensor b(af::constant(3, 1, 3));
-    tensor c(kaiming_uniform(1, 3));
+    tensor a(af::constant(2, 1, 3), true);
+    tensor b(af::constant(3, 1, 3), true);
+    tensor c(kaiming_uniform(1, 3), true);
 
     tensor &x = (c * a - b).relu();
     x.backward();
@@ -108,15 +108,15 @@ TEST(Tensor, relu_tanh_sigmoid)
 
 static tensor& forward(tensor &x)
 {
-    static tensor w(af::constant(2, 1, 3));
-    static tensor b(af::constant(3, 1, 3));
+    static tensor w(af::constant(2, 1, 3), true);
+    static tensor b(af::constant(3, 1, 3), true);
 
     return w * x + b;
 }
 
 TEST(Tensor, stacked_var)
 {
-    tensor x = af::constant(2, 1, 3);
+    tensor x(af::constant(2, 1, 3), true);
     tensor out1 = forward(x);
     tensor out2 = forward(out1);
 
@@ -127,9 +127,9 @@ TEST(Tensor, stacked_var)
 
 TEST(Tensor, add_assign)
 {
-    tensor a(af::constant(1, 1, 3));
-    tensor b(af::constant(2, 3, 3));
-    tensor c(af::constant(3, 1, 3));
+    tensor a(af::constant(1, 1, 3), true);
+    tensor b(af::constant(2, 3, 3), true);
+    tensor c(af::constant(3, 1, 3), true);
     tensor &z = a.matmul(b);
     z += c;
     z.backward();
@@ -155,7 +155,7 @@ TEST(Tensor, add_assign)
 
 TEST(Tensor, sum_neg)
 {
-    tensor a(af::randu(2, 3));
+    tensor a(af::randu(2, 3), true);
     tensor s = a.sum(0);
 
     s.backward();
@@ -176,8 +176,8 @@ TEST(Tensor, sum_neg)
 
 TEST(Tensor, bdim0)
 {
-    tensor x(af::constant(2, 1, 3));
-    tensor y(af::constant(3, 2, 3));
+    tensor x(af::constant(2, 1, 3), true);
+    tensor y(af::constant(3, 2, 3), true);
     tensor &z = y * x.bdim0(y);
     z.backward();
     EXPECT_FLOAT_EQ(first(z.data), 6);
@@ -188,7 +188,7 @@ TEST(Tensor, bdim0)
 
 TEST(Tensor, log)
 {
-    tensor zero(af::constant(0, 1, 3));
+    tensor zero(af::constant(0, 1, 3), true);
     tensor log = zero.log();
     log.forward();
     EXPECT_FLOAT_EQ(first(log.data), -27.631021f);
@@ -197,8 +197,8 @@ TEST(Tensor, log)
 TEST(Tensor, bmax)
 {
     af::dim4 d={2,3};
-    tensor a(array(d, {0.6009535f,0.0277588f,0.9805506f,0.2126322f,0.0654638f,0.5496738f}));
-    tensor b(af::constant(2,2,3));
+    tensor a(array(d, {0.6009535f,0.0277588f,0.9805506f,0.2126322f,0.0654638f,0.5496738f}), true);
+    tensor b(af::constant(2,2,3), true);
     tensor &m = b * a.bmax(1);
     m.backward();
     array_eq(m.data, {1.9611012f, 1.0993476f, 1.9611012f, 1.0993476f, 1.9611012f, 1.0993476f});
