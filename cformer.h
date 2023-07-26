@@ -28,7 +28,7 @@ struct oper {
 struct tensor {
     array data = array();  // evaluated data of the tensor
     array grad = array();  // gradient of the tensor
-    array velocity = array();   // velocity for SGD with momentum
+    array velocity = array(); // velocity for SGD with momentum
     array mean = array();  // first moment for Adam
     array variance = array(); // second moment for Adam
     tensor *lhs = nullptr; // left-hand-side of the expression
@@ -36,15 +36,17 @@ struct tensor {
     tensor *rhs = nullptr; // right-hand-side of the expression
     oper *op = nullptr;    // operator of the expression
     bool no_delete = true; // whether to delete the tensor by .destroy_graph()
+    bool need_grad = false; // whether to compute the gradient of the tensor
 
 #define copy_delete(t) data = t.data; grad = t.grad; velocity  = t.velocity ; lhs = t.lhs; rhs = t.rhs; \
-        dim = t.dim; op = t.op; if (!t.no_delete) delete &t;
+        dim = t.dim; op = t.op; need_grad = t.need_grad; if (!t.no_delete) delete &t;
 
     tensor() = default;
-    tensor(const array &a) : data(a), grad(af::constant(0, a.dims())) {} // for leaf tensor
+    tensor(const array &a, bool ng = false) : data(a), need_grad(ng)
+        {if (need_grad) grad = af::constant(0, a.dims());} // for leaf tensor
     tensor(const tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
-        : lhs(a), rhs(b), op(o), no_delete(false) {}
+        : lhs(a), rhs(b), op(o), no_delete(false), need_grad(true) {}
     void operator=(tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     //~tensor() { printf("~tensor() %p\n", this); }
 #undef copy_delete
@@ -72,7 +74,7 @@ struct tensor {
     void destroy_graph(void);
     void print_graph(void);
     inline void zero_grad(void) {grad = 0;}
-    inline void assign_data(const array &a){data = a; grad = af::constant(0, a.dims());}
+    inline void assign_data(const array &a){data = a; if (need_grad) grad = af::constant(0, a.dims());}
     inline bool is_leaf(void) {return lhs == nullptr && rhs == nullptr;}
     tensor& matmul(tensor &t);
     tensor& log(void);
@@ -171,7 +173,8 @@ enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax};
 struct layer {
     const char *name;
     bool no_bias;
-    tensor weight, bias;
+    tensor weight = tensor(array(), true);
+    tensor bias = tensor (array(), true);
     activ_t act;
     virtual ~layer() = default;
     virtual tensor& forward(tensor &x) = 0;
@@ -192,7 +195,6 @@ struct linear : layer {
      */
     {name = "Linear"; act = a; no_bias = nb; weight.assign_data(init(in, out, t));
     if (!no_bias) bias.assign_data(af::transpose(init(out, 1, t)));}
-    //af_print(weight.data); af_print(bias.data);}
     tensor& forward(tensor &x) override;
 };
 

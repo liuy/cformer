@@ -4,6 +4,8 @@
 // So we need to accumulate the gradients for leaf tensors.
 static inline void update_grad(tensor *t, const array &grad)
 {
+    if (t->is_leaf() && !t->need_grad)
+        return;
     t->grad = t->is_leaf() ? t->grad + grad : grad;
 }
 
