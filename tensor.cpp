@@ -6,6 +6,14 @@ static inline void update_grad(tensor *t, const array &grad)
 {
     if (t->is_leaf() && !t->need_grad)
         return;
+    // This is the hottes path in the training, we cann't keep it.
+    // uncomment it when you hit "inf or NaN" problems to debug.
+    // if (unlikely(tensor_has_inf_nan(grad))) {
+    //     t->print_graph();
+    //     af_print(t->data);
+    //     af_print(grad);
+    //     panic("got inf or nan problem");
+    // }
     t->grad = t->is_leaf() ? t->grad + grad : grad;
 }
 
@@ -66,15 +74,18 @@ static void bwd_matmul(tensor *a, tensor *b, array &grad)
 }
 
 /**
+ * Softmax of very confident network could either produce 0(underflow) or extreamly small
+ * number for the y_pred.data, then forward and backward of log(y_pred) will produce inf or NaN
+ * gradient problem.
+ *
  * pytorch and tensorflow add EPSILON in *_cross_entropy functions to avoid log(0).
- * we replace 0 with EPSILON here.
+ * we clip value(v < EPSILON) with EPSILON here.
  */
 static array fwd_log(tensor *a, tensor *dummy)
 {
-#define EPSILON 1e-12
-    array t(a->data);
-    af::replace(t, t != 0, EPSILON);
-    return af::log(t);
+#define EPSILON 1e-8
+    af::replace(a->data, a->data >= EPSILON, EPSILON);
+    return af::log(a->data);
 }
 
 static void bwd_log(tensor *a, tensor *b, array &grad)

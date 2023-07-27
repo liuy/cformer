@@ -332,6 +332,8 @@ static inline int random(int from, int to)
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#define tensor_has_inf_nan(a) (af::anyTrue<bool>(af::isNaN(a)) || af::anyTrue<bool>(af::isInf(a)))
+
 // static inline int random(int from, int to)
 // {
 //     static std::default_random_engine e(std::time(nullptr));
