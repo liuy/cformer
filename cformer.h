@@ -117,7 +117,7 @@ static inline array kaiming_normal(int in, int out, const af::dtype ty = f32)
 }
 
 // xavier_normal is randn value with mean 0 and std sqrt(2.0 / (in + out)) and mostly for tanh and sigmoid
-static inline array xavier_normal(int in, int out, uint64_t seed = 0, const af::dtype ty = f32)
+static inline array xavier_normal(int in, int out, const af::dtype ty = f32)
 {
     return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / (in + out));
 }
