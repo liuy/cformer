@@ -35,7 +35,7 @@ TEST(Tensor, add_sub_mul_div)
     z.destroy_graph();
 }
 
-static tensor& softmax(tensor &x, int dim)
+static tensor& test_softmax(tensor &x, int dim)
 {
     return x.exp()/x.exp().bsum(dim);
 }
@@ -46,7 +46,7 @@ TEST(Tensor, exp_bsum)
     tensor b(af::randu(2, 3), true);
     tensor c(af::randu(2, 3), true);
 
-    tensor &y = softmax(b-a*c, 1);
+    tensor &y = test_softmax(b-a*c, 1);
     y.backward();
     EXPECT_NEAR(af::sum<float>(a.grad), 0, 1e-6);
     EXPECT_NEAR(af::sum<float>(b.grad), 0, 1e-6);
@@ -57,7 +57,7 @@ TEST(Tensor, exp_bsum)
     a.assign_data(af::randu(1, 3));
     b.assign_data(af::randu(1, 3));
     c.assign_data(af::randu(1, 3));
-    tensor &z = softmax(b-a*c, 0);
+    tensor &z = test_softmax(b-a*c, 0);
     z.backward();
     EXPECT_NEAR(af::sum<float>(a.grad), 0, 1e-6);
     EXPECT_NEAR(af::sum<float>(b.grad), 0, 1e-6);
@@ -191,7 +191,18 @@ TEST(Tensor, log)
     tensor zero(af::constant(0, 1, 3), true);
     tensor log = zero.log();
     log.forward();
-    EXPECT_FLOAT_EQ(first(log.data), -27.631021f);
+    EXPECT_FLOAT_EQ(first(log.data), -18.420681f);
+
+    tensor x(array({1,2}, {100000.0f,0.0f}), true);
+    tensor y_true(array({1,2}, {1.0f, 0.0f}));
+    tensor &y_hat = softmax(x);
+    tensor &z = categorical_cross_entropy(y_true, y_hat);
+    z.backward();
+    EXPECT_FLOAT_EQ(first(z.data), 0.0f);
+    array_eq(y_hat.data, {1.0f, 0.0f});
+    array_eq(y_hat.grad, {-1.0f, -0.0f});
+    array_eq(x.grad, {0.0f, 0.0f});
+    z.destroy_graph();
 }
 
 TEST(Tensor, bmax)

@@ -1,11 +1,5 @@
 #include "cformer.h"
 
-tensor& softmax(tensor &x)
-{
-    tensor &exp = (x - x.bmax(1)).exp();
-    return exp/exp.bsum(1);
-}
-
 tensor& linear::forward(tensor &x)
 {
     tensor &y = x.matmul(weight);

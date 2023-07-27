@@ -348,4 +348,10 @@ void write_mnist_images(const array &x, const std::string& path);
 tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred);
 float categorical_accuracy(tensor &y_true, tensor &y_pred);
 
+static inline tensor& softmax(tensor &x)
+{
+    tensor &exp = (x - x.bmax(1)).exp();
+    return exp/exp.bsum(1);
+}
+
 #endif /* CFORMER_H */
