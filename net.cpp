@@ -14,6 +14,8 @@ tensor& linear::forward(tensor &x)
         return y.tanh();
     case Softmax:
         return softmax(y);
+    case LogSoftmax:
+        return y - y.lse();
     case None:
         return y;
     default:
@@ -37,6 +39,11 @@ tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred)
 float categorical_accuracy(tensor &y_true, tensor &y_pred)
 {
     return af::sum<float>(argmax(y_true.data) == argmax(y_pred.data)) / y_true.data.dims(0);
+}
+
+tensor& log_softmax_cross_entropy(tensor &y_true, tensor &y_pred)
+{
+    return -(y_true * y_pred).sum(1);
 }
 
 static inline void update_loss_metrics(float loss, float accu, size_t epoch, bool end)

@@ -169,8 +169,8 @@ struct data {
 
 typedef array (*initializer_t)(int, int, const af::dtype);
 
-static const char *activ_name[] = {"None", "ReLU", "Sigmoid", "Tanh", "Softmax"};
-enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax};
+static const char *activ_name[] = {"None", "ReLU", "Sigmoid", "Tanh", "Softmax", "LogSoftmax"};
+enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax, LogSoftmax};
 
 struct layer {
     const char *name;
@@ -350,6 +350,7 @@ void write_mnist_images(const array &x, const std::string& path);
 // ************************ nn functions ************************
 
 tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred);
+tensor& log_softmax_cross_entropy(tensor &y_true, tensor &y_pred);
 float categorical_accuracy(tensor &y_true, tensor &y_pred);
 
 static inline tensor& softmax(tensor &x)

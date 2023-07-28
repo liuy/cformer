@@ -5,7 +5,7 @@ int main(int argc, char* argv[])
     seqnet model {
         new linear(28*28, 300, ReLU),
         new linear(300, 100, ReLU),
-        new linear(100, 10, Softmax),
+        new linear(100, 10, LogSoftmax),
     };
     data set(mnist_reader);
     set.load({
@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
         .epochs = 20,
         .batch_size = 512,
         .optimizer = op,
-        .loss_fn = categorical_cross_entropy,
+        .loss_fn = log_softmax_cross_entropy,
         .metrics_fn = categorical_accuracy,
     };
     model.summary();
