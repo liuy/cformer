@@ -247,6 +247,20 @@ static void bwd_logsm(tensor *a, tensor *dummy, array &grad)
     update_grad(a, grad - bsum(grad) * exp / bsum(exp));
 }
 
+static array fwd_softmax(tensor *a, tensor *dummy)
+{
+    array exp = af::exp(a->data - bmax(a->data));
+    return exp / bsum(exp);
+}
+
+// y = softmax(x) => dx = softmax(x) * (dy - bsum(dy * softmax(x)))
+static void bwd_softmax(tensor *a, tensor *dummy, array &grad)
+{
+    array exp = af::exp(a->data - bmax(a->data));
+    array sm = exp / bsum(exp);
+    update_grad(a, sm * (grad - bsum(grad * sm)));
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -265,6 +279,7 @@ OPERATOR(bdim0);
 OPERATOR(bmax);
 OPERATOR(lse);
 OPERATOR(logsm);
+OPERATOR(softmax);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
     { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
@@ -285,6 +300,7 @@ METHOD(bdim0, tensor &t, &t, bdim0)
 METHOD(bmax, int dim, nullptr, bmax, this->dim = dim)
 METHOD(lse, void, nullptr, lse)
 METHOD(logsm, void, nullptr, logsm)
+METHOD(softmax, void, nullptr, softmax)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)

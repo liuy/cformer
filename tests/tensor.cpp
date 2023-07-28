@@ -195,7 +195,7 @@ TEST(Tensor, log)
 
     tensor x(array({1,2}, {100000.0f,0.0f}), true);
     tensor y_true(array({1,2}, {1.0f, 0.0f}));
-    tensor &y_hat = softmax(x);
+    tensor &y_hat = x.softmax();
     tensor &z = categorical_cross_entropy(y_true, y_hat);
     z.backward();
     EXPECT_FLOAT_EQ(first(z.data), 0.0f);
@@ -231,14 +231,24 @@ TEST(Tensor, lse_logsm)
     y.backward();
     af_print(y.data, 7);
     af_print(x.grad, 7);
-    array_eq(y.data, {-2.4076059f, -9999.0f, -1.4076059, 0.0f, -0.4076059f, -9995.0f});
+    array_eq(y.data, {-2.4076059f, -9999.0f, -1.4076059f, 0.0f, -0.4076059f, -9995.0f});
     array_eq(x.grad, {0.7299083f, 1.0f, 0.2658145f, -2.0f, -0.9957228f, 1.0f});
     y.destroy_graph();
     x.zero_grad();
 
     tensor &l = x.logsm();
     l.backward();
-    array_eq(l.data, {-2.4076059f, -9999.0f, -1.4076059, 0.0f, -0.4076059f, -9995.0f});
+    array_eq(l.data, {-2.4076059f, -9999.0f, -1.4076059f, 0.0f, -0.4076059f, -9995.0f});
     array_eq(x.grad, {0.7299083f, 1.0f, 0.2658145f, -2.0f, -0.9957228f, 1.0f});
     l.destroy_graph();
+}
+
+TEST(Tensor, softmax)
+{
+    tensor x(array({2,3}, {1.0f, 1.0f, 2.0f, 10000.0f, 3.0f, 5.0f}), true);
+    tensor &y = x.softmax();
+    y.backward();
+    array_eq(y.data, {0.0900306f, 0.0f, 0.2447285f, 1.0f, 0.6652409f, 0.0f});
+    array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+    y.destroy_graph();
 }

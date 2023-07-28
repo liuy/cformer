@@ -13,7 +13,7 @@ tensor& linear::forward(tensor &x)
     case Tanh:
         return y.tanh();
     case Softmax:
-        return softmax(y);
+        return y.softmax();
     case LogSoftmax:
         return y.logsm();
     case None:

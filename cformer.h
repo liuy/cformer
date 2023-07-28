@@ -82,6 +82,7 @@ struct tensor {
     tensor& relu(void);
     tensor& sigmoid(void);
     tensor& tanh(void);
+    tensor& softmax(void);
     /// @brief Sum all values along dimension dim and broadcast to the original shape.
     /// @param dim The dimension along which the add operation occurs.
     tensor& bsum(int);
@@ -353,11 +354,5 @@ void write_mnist_images(const array &x, const std::string& path);
 tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred);
 tensor& log_softmax_cross_entropy(tensor &y_true, tensor &y_pred);
 float categorical_accuracy(tensor &y_true, tensor &y_pred);
-
-static inline tensor& softmax(tensor &x)
-{
-    tensor &exp = (x - x.bmax(1)).exp();
-    return exp/exp.bsum(1);
-}
 
 #endif /* CFORMER_H */
