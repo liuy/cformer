@@ -15,7 +15,7 @@ tensor& linear::forward(tensor &x)
     case Softmax:
         return softmax(y);
     case LogSoftmax:
-        return y - y.lse();
+        return y.logsm();
     case None:
         return y;
     default:

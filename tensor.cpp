@@ -236,6 +236,17 @@ static void bwd_lse(tensor *a, tensor *dummy, array &grad)
     update_grad(a, bsum(grad) * exp / bsum(exp));
 }
 
+static array fwd_logsm(tensor *a, tensor *dummy)
+{
+    return a->data - bmax(a->data) - af::log(bsum(af::exp(a->data - bmax(a->data))));
+}
+
+static void bwd_logsm(tensor *a, tensor *dummy, array &grad)
+{
+    array exp = af::exp(a->data - bmax(a->data));
+    update_grad(a, grad - bsum(grad) * exp / bsum(exp));
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -253,6 +264,7 @@ OPERATOR(sum);
 OPERATOR(bdim0);
 OPERATOR(bmax);
 OPERATOR(lse);
+OPERATOR(logsm);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
     { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
@@ -272,6 +284,7 @@ METHOD(sum, int dim, nullptr, sum, this->dim = dim)
 METHOD(bdim0, tensor &t, &t, bdim0)
 METHOD(bmax, int dim, nullptr, bmax, this->dim = dim)
 METHOD(lse, void, nullptr, lse)
+METHOD(logsm, void, nullptr, logsm)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)
