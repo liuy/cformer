@@ -88,6 +88,8 @@ struct tensor {
     tensor& sum(int);
     tensor& bdim0(tensor &t);
     tensor& bmax(int);
+    /// @brief Oper fusion: LogSumExp along the dimension 1
+    tensor& lse(void);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
@@ -354,6 +356,11 @@ static inline tensor& softmax(tensor &x)
 {
     tensor &exp = (x - x.bmax(1)).exp();
     return exp/exp.bsum(1);
+}
+
+static inline tensor& log_softmax(tensor &x)
+{
+    return x - x.lse();
 }
 
 #endif /* CFORMER_H */

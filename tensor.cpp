@@ -197,26 +197,43 @@ static void bwd_bdim0(tensor *a, tensor *b, array &grad)
     update_grad(a, af::sum(grad, 0));
 }
 
+static inline array bmax(const array &a)
+{
+    return af::tile(af::max(a, 1), 1, a.dims(1));
+}
+
+static inline array bsum(const array &a)
+{
+    return af::tile(af::sum(a, 1), 1, a.dims(1));
+}
+
 // Suppport dim=1 right now, TODO: need refine onehot to support more dims
 static array fwd_bmax(tensor *a, tensor *dummy)
 {
     assert(a->dim == 1);
-    af::dim4 dims = {1, 1, 1, 1};
-    dims[a->dim] = a->data.dims(a->dim);
-    return af::tile(af::max(a->data, a->dim),dims);
+    return bmax(a->data);
 }
 
 // y = bmax(x) => dx = bsum(dy) * onehot(max_idx)
 static void bwd_bmax(tensor *a, tensor *dummpy, array &grad)
 {
-    auto bsum = [](array &a, int dim) {
-        af::dim4 dims = { 1, 1, 1, 1 };
-        dims[dim] = a.dims(dim);
-        return af::tile(af::sum(a, dim), dims);
-    };
     array dummy, idx;
     af::max(dummy, idx, a->data, a->dim);
-    update_grad(a, bsum(grad, a->dim) * onehot(idx, grad.dims(a->dim)));
+    update_grad(a, bsum(grad) * onehot(idx, grad.dims(a->dim)));
+}
+
+// LogSumExp(x) trick to avoid overflow/underflow,
+// see https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
+static array fwd_lse(tensor *a, tensor *dummy)
+{
+    return af::log(bsum(af::exp(a->data - bmax(a->data)))) + bmax(a->data);
+}
+
+// y = lse(x) => dx = bsum(dy) * exp(x) / bsum(exp(x))
+static void bwd_lse(tensor *a, tensor *dummy, array &grad)
+{
+    array exp = af::exp(a->data - bmax(a->data));
+    update_grad(a, bsum(grad) * exp / bsum(exp));
 }
 
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
@@ -235,6 +252,7 @@ OPERATOR(bsum);
 OPERATOR(sum);
 OPERATOR(bdim0);
 OPERATOR(bmax);
+OPERATOR(lse);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
     { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
@@ -253,6 +271,7 @@ METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
 METHOD(sum, int dim, nullptr, sum, this->dim = dim)
 METHOD(bdim0, tensor &t, &t, bdim0)
 METHOD(bmax, int dim, nullptr, bmax, this->dim = dim)
+METHOD(lse, void, nullptr, lse)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)
