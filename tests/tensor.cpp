@@ -251,4 +251,14 @@ TEST(Tensor, softmax)
     array_eq(y.data, {0.0900306f, 0.0f, 0.2447285f, 1.0f, 0.6652409f, 0.0f});
     array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
     y.destroy_graph();
+    x.zero_grad();
+
+    // log_softmax != log(softmax) in the sense that the former is more numerically stable and accurate
+    tensor &l = x.softmax().log();
+    l.backward();
+    af_print(l.data, 8);
+    af_print(x.grad, 8);
+    array_eq(l.data, {-2.4076059f, -18.420681f, -1.4076059f, 0.0f, -0.4076059f, -18.420681f});
+    array_eq(x.grad, {0.7299082f, 0.0f, 0.2658145f, 0.0f, -0.9957228f, 0.0f});
+    l.destroy_graph();
 }
