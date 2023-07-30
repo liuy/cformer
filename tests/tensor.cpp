@@ -262,3 +262,14 @@ TEST(Tensor, softmax)
     array_eq(x.grad, {0.7299082f, 0.0f, 0.2658145f, 0.0f, -0.9957228f, 0.0f});
     l.destroy_graph();
 }
+
+TEST(Tensor, bstd)
+{
+    tensor x(array({2,3}, {1.0f, 3.0f, 2.0f, 3.0f, 3.0f, 3.0f}), true);
+    tensor &y = x.bstd();
+    y.backward();
+    af_print(y.data, 8);
+    af_print(x.grad, 8);
+    array_eq(y.data, {0.816496f, 0.0f, 0.816496f, 0.0f, 0.816496f, 0.0f});
+    array_eq(x.grad, {-1.224744, 0.0f, 0.0f, 0.0f, 1.224744, 0.0f});
+}
