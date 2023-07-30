@@ -181,7 +181,7 @@ struct layer {
     tensor bias = tensor (array(), true);
     activ_t act;
     virtual ~layer() = default;
-    virtual tensor& forward(tensor &x) = 0;
+    virtual tensor& forward(tensor &x, bool = false) = 0;
     inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
 };
 
@@ -199,7 +199,7 @@ struct linear : layer {
      */
     {name = "Linear"; act = a; no_bias = nb; weight.assign_data(init(in, out, t));
     if (!no_bias) bias.assign_data(af::transpose(init(out, 1, t)));}
-    tensor& forward(tensor &x) override;
+    tensor& forward(tensor &x, bool training = false) override;
 };
 
 struct optimizer {
@@ -252,7 +252,7 @@ struct seqnet {
     inline void add(layer *l)
     { layers.push_back(l); params.push_back(&l->weight); if (!l->no_bias) params.push_back(&l->bias); }
     void train(data &set, trainer &tr);
-    tensor& forward(tensor &x);
+    tensor& forward(tensor &x, bool training = false);
     inline tensor& operator()(tensor &x) { tensor &r = forward(x); r.forward(); return r; }
     void summary(void);
 };

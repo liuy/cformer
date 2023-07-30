@@ -1,6 +1,6 @@
 #include "cformer.h"
 
-tensor& linear::forward(tensor &x)
+tensor& linear::forward(tensor &x, bool training)
 {
     tensor &y = x.matmul(weight);
     if (!no_bias)
@@ -23,11 +23,11 @@ tensor& linear::forward(tensor &x)
     }
 }
 
-tensor& seqnet::forward(tensor &x)
+tensor& seqnet::forward(tensor &x, bool training)
 {
     tensor *y = &x;
     for (auto layer : layers)
-        y = &layer->forward(*y);
+        y = &layer->forward(*y, training);
     return *y;
 }
 
@@ -134,7 +134,7 @@ void seqnet::train(data &set, trainer &tr)
         for (std::vector<size_t>::iterator it = set.train_idx.begin(); it != set.train_idx.end(); it++) {
             tensor x_batch, y_true;
             set.get_mini_batch(x_batch, y_true, *it, tr.batch_size);
-            tensor &y_pred = forward(x_batch);
+            tensor &y_pred = forward(x_batch, true);
             tensor &loss = tr.loss_fn(y_true, y_pred);
 
             loss.backward();
