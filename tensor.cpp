@@ -363,7 +363,6 @@ void tensor::forward(void)
     cf_debug("%s", op->name);
     data = op->forward_fn(lhs, rhs);
     //data_computed = true;
-    grad = af::constant(0, data.dims());
 }
 
 static void do_backward(tensor *t)
