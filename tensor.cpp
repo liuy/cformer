@@ -389,6 +389,14 @@ void tensor::backward(void)
     do_backward(this);
 }
 
+void tensor::backward(const array &g)
+{
+    if (!is_leaf())
+        forward();
+    grad = g;
+    do_backward(this);
+}
+
 static void get_nonleafs(tensor *t, std::unordered_set<tensor *> &nonleafs)
 {
     if (!t->is_leaf())

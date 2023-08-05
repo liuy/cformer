@@ -71,6 +71,7 @@ struct tensor {
     // by operators are allocated on the heap.
     void forward(void);
     void backward(void);
+    void backward(const array &g);
     void destroy_graph(void);
     void print_graph(void);
     inline void zero_grad(void) {grad = 0;}
