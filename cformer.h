@@ -255,7 +255,8 @@ struct seqnet {
     { layers.push_back(l); params.push_back(&l->weight); if (!l->no_bias) params.push_back(&l->bias); }
     void train(data &set, trainer &tr);
     tensor& forward(tensor &x, bool training = false);
-    inline tensor& operator()(tensor &x) { tensor &r = forward(x); r.forward(); return r; }
+    inline tensor operator()(tensor &x) {
+        tensor &t = forward(x); t.forward(); tensor r; r.data = t.data; t.destroy_graph(); return r; }
     void summary(void);
 };
 

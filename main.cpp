@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     model.summary();
     model.train(set, tr);
 
-    tensor &y_pred = model(set.test_x);
+    tensor y_pred = model(set.test_x);
     float accu = categorical_accuracy(set.test_y, y_pred);
     printf("\nTotal time %.1fs, MNIST Test accuracy: %.4f\n", af::timer::stop(t), accu);
     return 0;
