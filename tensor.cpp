@@ -354,7 +354,7 @@ void tensor::operator+= (tensor &t)
 
 void tensor::forward(void)
 {
-    if (is_leaf())
+    if (data_computed || is_leaf())
         return;
     if (lhs && !lhs->is_leaf())
         lhs->forward();
@@ -362,7 +362,7 @@ void tensor::forward(void)
         rhs->forward();
     cf_debug("%s", op->name);
     data = op->forward_fn(lhs, rhs);
-    //data_computed = true;
+    data_computed = true;
 }
 
 static void do_backward(tensor *t)

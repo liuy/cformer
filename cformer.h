@@ -37,9 +37,10 @@ struct tensor {
     oper *op = nullptr;    // operator of the expression
     bool no_delete = true; // whether to delete the tensor by .destroy_graph()
     bool need_grad = false; // whether to compute the gradient of the tensor
+    bool data_computed = false; // whether the data of non-leaf node is computed
 
 #define copy_delete(t) data = t.data; grad = t.grad; velocity  = t.velocity ; lhs = t.lhs; rhs = t.rhs; \
-        dim = t.dim; op = t.op; need_grad = t.need_grad; if (!t.no_delete) delete &t;
+        dim = t.dim; op = t.op; need_grad = t.need_grad; data_computed = t.data_computed; if (!t.no_delete) delete &t;
 
     tensor() = default;
     tensor(const array &a, bool ng = false) : data(a), need_grad(ng)
