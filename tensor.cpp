@@ -261,7 +261,6 @@ static void bwd_softmax(tensor *a, tensor *dummy, array &grad)
     update_grad(a, sm * (grad - bsum(grad * sm)));
 }
 
-//array g = grad - bsum(grad) / batch_size; // d(x - mean) = dy - bsum(dy) / batch_size
 // Support dim=1 only right now.
 static inline array bmean(const array &a)
 {
@@ -282,17 +281,35 @@ static inline array bstd(const array &a)
 
 static array fwd_bstd(tensor *a, tensor *dummy)
 {
-    return bstd(a->data);
+    array var = bvar(a->data);
+    // bwd_bstd will divide by std, so replace 0 with 1e-5, which is from pytorch's batchnorm
+    af::replace(var, var >= 1e-5, 1e-5);
+    return af::sqrt(var);
 }
 
 static void bwd_bstd(tensor *a, tensor *dummy, array &grad)
 {
-    size_t batch_size = a->data.dims(1);
+    size_t n = a->data.dims(1);
     array mean = bmean(a->data);
-    array std = bstd(a->data);
-    af::replace(std, std >= 1e-5, 1e-5); // avoid divide by zero. batchnorm of pytorch use 1e-5
+    array var = bvar(a->data);
+    af::replace(var, var >= 1e-5, 1e-5);
+    array std = af::sqrt(var);
     array y = (a->data - mean) / std;
-    array dx = bsum(grad) * y / batch_size;
+    array dx = bsum(grad) * y / n;
+
+    update_grad(a, dx);
+}
+
+static array fwd_submean(tensor *a, tensor *dummy)
+{
+    return a->data - bmean(a->data);
+}
+
+static void bwd_submean(tensor *a, tensor *dummy, array &grad)
+{
+    size_t n = a->data.dims(1);
+    array mean = bmean(a->data);
+    array dx = grad - bsum(grad) / n;
 
     update_grad(a, dx);
 }
@@ -316,6 +333,7 @@ OPERATOR(bmax);
 OPERATOR(lse);
 OPERATOR(logsm);
 OPERATOR(softmax);
+OPERATOR(submean);
 OPERATOR(bstd);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
@@ -339,6 +357,7 @@ METHOD(lse, void, nullptr, lse)
 METHOD(logsm, void, nullptr, logsm)
 METHOD(softmax, void, nullptr, softmax)
 METHOD(bstd, void, nullptr, bstd)
+METHOD(submean, void, nullptr, submean)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)

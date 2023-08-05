@@ -94,6 +94,7 @@ struct tensor {
     /// @brief Oper fusion: LogSumExp along the dimension 1
     tensor& lse(void);
     tensor& logsm(void);
+    tensor& submean(void);
     tensor& bstd(void);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);

@@ -268,12 +268,41 @@ TEST(Tensor, bstd)
     tensor x(array({2,3}, {1.0f, 3.0f, 2.0f, 3.0f, 3.0f, 3.0f}), true);
     tensor &y = x.bstd();
     y.backward();
-    array_eq(y.data, {0.816496f, 0.0f, 0.816496f, 0.0f, 0.816496f, 0.0f});
+    array_eq(y.data, {0.816496f, 0.003162f, 0.816496f, 0.003162f, 0.816496f, 0.003162f});
     array_eq(x.grad, {-1.224744f, 0.0f, 0.0f, 0.0f, 1.224744f, 0.0f});
 
     x.zero_grad();
     y.backward(array({2,3}, {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f}));
-    array_eq(y.data, {0.816496f, 0.0f, 0.816496f, 0.0f, 0.816496f, 0.0f});
+    array_eq(y.data, {0.816496f, 0.003162f, 0.816496f, 0.003162f, 0.816496f, 0.003162f});
     array_eq(x.grad, {-2.449489f, 0.0f, 0.0f, 0.0f,  2.449489f, 0.0f});
+    y.destroy_graph();
+}
+
+TEST(Tensor, submean_bstd)
+{
+    tensor x(array({2,3}, {1.0f, 3.0f, 2.0f, 3.0f, 3.0f, 3.0f}), true);
+    tensor y = x.submean();
+    y.backward();
+    array_eq(y.data, {-1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f});
+    array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+    x.zero_grad();
+
+    y.backward(array({2,3}, {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f}));
+    array_eq(y.data, {-1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f});
+    array_eq(x.grad, {-2.0f, -2.0f, 0.0f, 0.0f, 2.0f, 2.0f});
+    y.destroy_graph();
+    x.zero_grad();
+
+    y = x.submean() / x.bstd();
+    y.backward();
+    array_eq(y.data, {-1.224744f, 0.0f, 0.0f, 0.0f, 1.224744f, 0.0f});
+    array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+    x.zero_grad();
+
+    y.backward(array({2,3}, {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f}));
+    af_print(y.data, 8);
+    af_print(x.grad, 8);
+    array_eq(y.data, {-1.224744f, 0.0f, 0.0f, 0.0f, 1.224744f, 0.0f});
+    array_eq(x.grad, {0.0f, -632.455566f, 0.0f, 0.0f, 0.0f, 632.455444f});
     y.destroy_graph();
 }
