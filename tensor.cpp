@@ -22,7 +22,7 @@ static array fwd_add(tensor *a, tensor *b)
     return a->data + b->data;
 }
 
-static void bwd_add(tensor *a, tensor *b, array &grad)
+static void bwd_add(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, grad);
     update_grad(b, grad);
@@ -33,7 +33,7 @@ static array fwd_sub(tensor *a, tensor *b)
     return a->data - b->data;
 }
 
-static void bwd_sub(tensor *a, tensor *b, array &grad)
+static void bwd_sub(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, grad);
     update_grad(b, -grad);
@@ -44,7 +44,7 @@ static array fwd_mul(tensor *a, tensor *b)
     return a->data * b->data;
 }
 
-static void bwd_mul(tensor *a, tensor *b, array &grad)
+static void bwd_mul(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, b->data * grad);
     update_grad(b, a->data * grad);
@@ -55,10 +55,10 @@ static array fwd_div(tensor *a, tensor *b)
     return a->data / b->data;
 }
 
-static void bwd_div(tensor *a, tensor *b, array &grad)
+static void bwd_div(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, grad / b->data);
-    update_grad(b, -grad * a->data / (b->data * b->data));
+    update_grad(b, -grad * y / b->data);
 }
 
 static array fwd_matmul(tensor *a, tensor *b)
@@ -67,7 +67,7 @@ static array fwd_matmul(tensor *a, tensor *b)
 }
 
 // y = a @ b => dy = y.grad, da = y.grad @ b.T, db = a.T @ y.grad
-static void bwd_matmul(tensor *a, tensor *b, array &grad)
+static void bwd_matmul(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, af::matmulNT(grad, b->data));
     update_grad(b, af::matmulTN(a->data, grad));
@@ -88,7 +88,7 @@ static array fwd_log(tensor *a, tensor *dummy)
     return af::log(a->data);
 }
 
-static void bwd_log(tensor *a, tensor *b, array &grad)
+static void bwd_log(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, grad / a->data);
 }
@@ -98,9 +98,9 @@ static array fwd_exp(tensor *a, tensor *dummy)
     return af::exp(a->data);
 }
 
-static void bwd_exp(tensor *a, tensor *b, array &grad)
+static void bwd_exp(tensor *a, tensor *b, array &grad, array &y)
 {
-    update_grad(a, grad * af::exp(a->data));
+    update_grad(a, grad * y);
 }
 
 static array fwd_relu(tensor *a, tensor *dummy)
@@ -110,7 +110,7 @@ static array fwd_relu(tensor *a, tensor *dummy)
 }
 
 // y = relu(x) => dx = dy * (x > 0)
-static void bwd_relu(tensor *a, tensor *dummy, array &grad)
+static void bwd_relu(tensor *a, tensor *dummy, array &grad, array &y)
 {
     array zero = af::constant(0, a->data.dims(), a->data.type());
     update_grad(a, af::select(a->data > zero, grad, zero));
@@ -130,7 +130,7 @@ static array fwd_bsum(tensor *a, tensor *dummy)
 // y = brad(sum(x)), dy = y.grad.
 // dx = y.grad @ ones(d, d) if dim = 1, d = x.dims[1]
 // dx = ones(d, d) @ y.grad if dim = 0, d = x.dims[0]
-static void bwd_bsum(tensor *a, tensor *dummy, array &grad)
+static void bwd_bsum(tensor *a, tensor *dummy, array &grad, array &y)
 {
     af::dim4 dims = {1, 1, 1, 1};
     dims[a->dim] = a->data.dims(a->dim);
@@ -142,10 +142,9 @@ static array fwd_sigmoid(tensor *a, tensor *dummy)
     return af::sigmoid(a->data);
 }
 
-static void bwd_sigmoid(tensor *a, tensor *dummy, array &grad)
+static void bwd_sigmoid(tensor *a, tensor *dummy, array &grad, array &y)
 {
-    array sig = af::sigmoid(a->data);
-    update_grad(a, grad * sig * (1 - sig));
+    update_grad(a, grad * y * (1 - y));
 }
 
 static array fwd_tanh(tensor *a, tensor *dummy)
@@ -153,10 +152,9 @@ static array fwd_tanh(tensor *a, tensor *dummy)
     return af::tanh(a->data);
 }
 
-static void bwd_tanh(tensor *a, tensor *dummy, array &grad)
+static void bwd_tanh(tensor *a, tensor *dummy, array &grad, array &y)
 {
-    array tanh = af::tanh(a->data);
-    update_grad(a, grad * (1 - tanh * tanh));
+    update_grad(a, grad * (1 - y * y));
 }
 
 static array fwd_sum(tensor *a, tensor *dummy)
@@ -164,7 +162,7 @@ static array fwd_sum(tensor *a, tensor *dummy)
     return af::sum(a->data, a->dim);
 }
 
-static void bwd_sum(tensor *a, tensor *dummy, array &grad)
+static void bwd_sum(tensor *a, tensor *dummy, array &grad, array &y)
 {
     af::dim4 dims = {1, 1, 1, 1};
     dims[a->dim] = a->data.dims(a->dim);
@@ -177,7 +175,7 @@ static array fwd_neg(tensor *a, tensor *dummy)
     return -a->data;
 }
 
-static void bwd_neg(tensor *a, tensor *dummy, array &grad)
+static void bwd_neg(tensor *a, tensor *dummy, array &grad, array &y)
 {
     update_grad(a, -grad);
 }
@@ -192,7 +190,7 @@ static array fwd_bdim0(tensor *a, tensor *b)
 }
 
 // y = bdim0(x) => dx = sum(dy, dim=0)
-static void bwd_bdim0(tensor *a, tensor *b, array &grad)
+static void bwd_bdim0(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, af::sum(grad, 0));
 }
@@ -215,7 +213,7 @@ static array fwd_bmax(tensor *a, tensor *dummy)
 }
 
 // y = bmax(x) => dx = bsum(dy) * onehot(max_idx)
-static void bwd_bmax(tensor *a, tensor *dummpy, array &grad)
+static void bwd_bmax(tensor *a, tensor *dummpy, array &grad, array &y)
 {
     array dummy, idx;
     af::max(dummy, idx, a->data, a->dim);
@@ -230,7 +228,7 @@ static array fwd_lse(tensor *a, tensor *dummy)
 }
 
 // y = lse(x) => dx = bsum(dy) * exp(x) / bsum(exp(x))
-static void bwd_lse(tensor *a, tensor *dummy, array &grad)
+static void bwd_lse(tensor *a, tensor *dummy, array &grad, array &y)
 {
     array exp = af::exp(a->data - bmax(a->data));
     update_grad(a, bsum(grad) * exp / bsum(exp));
@@ -241,7 +239,7 @@ static array fwd_logsm(tensor *a, tensor *dummy)
     return a->data - bmax(a->data) - af::log(bsum(af::exp(a->data - bmax(a->data))));
 }
 
-static void bwd_logsm(tensor *a, tensor *dummy, array &grad)
+static void bwd_logsm(tensor *a, tensor *dummy, array &grad, array &y)
 {
     array exp = af::exp(a->data - bmax(a->data));
     update_grad(a, grad - bsum(grad) * exp / bsum(exp));
@@ -254,11 +252,11 @@ static array fwd_softmax(tensor *a, tensor *dummy)
 }
 
 // y = softmax(x) => dx = softmax(x) * (dy - bsum(dy * softmax(x)))
-static void bwd_softmax(tensor *a, tensor *dummy, array &grad)
+static void bwd_softmax(tensor *a, tensor *dummy, array &grad, array &y)
 {
-    array exp = af::exp(a->data - bmax(a->data));
-    array sm = exp / bsum(exp);
-    update_grad(a, sm * (grad - bsum(grad * sm)));
+    // Note: higher level oper might modify output of softmax to avoid 0 (such as log)
+    // so seems that using 'y' is more numerically accurate than recomputing from 'a->data'
+    update_grad(a, y * (grad - bsum(grad * y)));
 }
 
 // Support dim=1 only right now.
@@ -287,15 +285,12 @@ static array fwd_bstd(tensor *a, tensor *dummy)
     return af::sqrt(var);
 }
 
-static void bwd_bstd(tensor *a, tensor *dummy, array &grad)
+static void bwd_bstd(tensor *a, tensor *dummy, array &grad, array &y)
 {
     size_t n = a->data.dims(1);
     array mean = bmean(a->data);
-    array var = bvar(a->data);
-    af::replace(var, var >= 1e-5, 1e-5);
-    array std = af::sqrt(var);
-    array y = (a->data - mean) / std;
-    array dx = bsum(grad) * y / n;
+    array bn = (a->data - mean) / y;
+    array dx = bsum(grad) * bn / n;
 
     update_grad(a, dx);
 }
@@ -305,7 +300,7 @@ static array fwd_submean(tensor *a, tensor *dummy)
     return a->data - bmean(a->data);
 }
 
-static void bwd_submean(tensor *a, tensor *dummy, array &grad)
+static void bwd_submean(tensor *a, tensor *dummy, array &grad, array &y)
 {
     size_t n = a->data.dims(1);
     array mean = bmean(a->data);
@@ -389,7 +384,7 @@ static void do_backward(tensor *t)
     if (t->is_leaf())
         return;
     if (t->op && t->op->backward_fn)
-        t->op->backward_fn(t->lhs, t->rhs, t->grad);
+        t->op->backward_fn(t->lhs, t->rhs, t->grad, t->data);
     if (t->lhs)
         do_backward(t->lhs);
     if (t->rhs)

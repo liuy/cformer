@@ -259,7 +259,7 @@ TEST(Tensor, softmax)
     af_print(l.data, 8);
     af_print(x.grad, 8);
     array_eq(l.data, {-2.4076059f, -18.420681f, -1.4076059f, 0.0f, -0.4076059f, -18.420681f});
-    array_eq(x.grad, {0.7299082f, 0.0f, 0.2658145f, 0.0f, -0.9957228f, 0.0f});
+    array_eq(x.grad, {0.7299082f, 1.0f, 0.2658145f, -2.0f, -0.9957228f, 1.0f});
     l.destroy_graph();
 }
 
