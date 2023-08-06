@@ -48,6 +48,8 @@ struct tensor {
     tensor(const tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
         : lhs(a), rhs(b), op(o), no_delete(false), need_grad(true) {}
+    tensor(tensor *a, const array &b, oper *o) // create a leaf node from an array
+        : lhs(a), op(o), no_delete(false), need_grad(true) { rhs = new tensor(b); rhs->no_delete = false; }
     void operator=(tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     //~tensor() { printf("~tensor() %p\n", this); }
 #undef copy_delete
