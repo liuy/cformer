@@ -1,5 +1,18 @@
 #include "cformer.h"
 
+static inline array bmax(const array &a)
+{
+    return af::tile(af::max(a, 1), 1, a.dims(1));
+}
+
+static inline array bsum(const array &a, int dim)
+{
+    af::dim4 dims = {1, 1, 1, 1};
+    dims[dim] = a.dims(dim);
+
+    return af::tile(af::sum(a, dim), dims);
+}
+
 // Leaf tensors might be shared by non-leaf tensors in the graph.
 // So we need to accumulate the gradients for leaf tensors.
 static inline void update_grad(tensor *t, const array &grad)
@@ -235,16 +248,6 @@ static void bwd_bdim0(tensor *a, tensor *b, array &grad, array &y)
     update_grad(a, af::sum(grad, 0));
 }
 
-static inline array bmax(const array &a)
-{
-    return af::tile(af::max(a, 1), 1, a.dims(1));
-}
-
-static inline array bsum(const array &a)
-{
-    return af::tile(af::sum(a, 1), 1, a.dims(1));
-}
-
 // Suppport dim=1 right now, TODO: need refine onehot to support more dims
 static array fwd_bmax(tensor *a, tensor *dummy)
 {
@@ -257,38 +260,38 @@ static void bwd_bmax(tensor *a, tensor *dummpy, array &grad, array &y)
 {
     array dummy, idx;
     af::max(dummy, idx, a->data, a->dim);
-    update_grad(a, bsum(grad) * onehot(idx, grad.dims(a->dim)));
+    update_grad(a, bsum(grad, 1) * onehot(idx, grad.dims(a->dim)));
 }
 
 // LogSumExp(x) trick to avoid overflow/underflow,
 // see https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
 static array fwd_lse(tensor *a, tensor *dummy)
 {
-    return af::log(bsum(af::exp(a->data - bmax(a->data)))) + bmax(a->data);
+    return af::log(bsum(af::exp(a->data - bmax(a->data)), 1)) + bmax(a->data);
 }
 
 // y = lse(x) => dx = bsum(dy) * exp(x) / bsum(exp(x))
 static void bwd_lse(tensor *a, tensor *dummy, array &grad, array &y)
 {
     array exp = af::exp(a->data - bmax(a->data));
-    update_grad(a, bsum(grad) * exp / bsum(exp));
+    update_grad(a, bsum(grad, 1) * exp / bsum(exp, 1));
 }
 
 static array fwd_logsm(tensor *a, tensor *dummy)
 {
-    return a->data - bmax(a->data) - af::log(bsum(af::exp(a->data - bmax(a->data))));
+    return a->data - bmax(a->data) - af::log(bsum(af::exp(a->data - bmax(a->data)), 1));
 }
 
 static void bwd_logsm(tensor *a, tensor *dummy, array &grad, array &y)
 {
     array exp = af::exp(a->data - bmax(a->data));
-    update_grad(a, grad - bsum(grad) * exp / bsum(exp));
+    update_grad(a, grad - bsum(grad, 1) * exp / bsum(exp, 1));
 }
 
 static array fwd_softmax(tensor *a, tensor *dummy)
 {
     array exp = af::exp(a->data - bmax(a->data));
-    return exp / bsum(exp);
+    return exp / bsum(exp, 1);
 }
 
 // y = softmax(x) => dx = softmax(x) * (dy - bsum(dy * softmax(x)))
@@ -296,7 +299,7 @@ static void bwd_softmax(tensor *a, tensor *dummy, array &grad, array &y)
 {
     // Note: higher level oper might modify output of softmax to avoid 0 (such as log)
     // so seems that using 'y' is more numerically accurate than recomputing from 'a->data'
-    update_grad(a, y * (grad - bsum(grad * y)));
+    update_grad(a, y * (grad - bsum(grad * y, 1)));
 }
 
 // Support dim=1 only right now.
@@ -330,7 +333,7 @@ static void bwd_bstd(tensor *a, tensor *dummy, array &grad, array &y)
     size_t n = a->data.dims(1);
     array mean = bmean(a->data);
     array bn = (a->data - mean) / y;
-    array dx = bsum(grad) * bn / n;
+    array dx = bsum(grad, 1) * bn / n;
 
     update_grad(a, dx);
 }
@@ -344,7 +347,7 @@ static void bwd_submean(tensor *a, tensor *dummy, array &grad, array &y)
 {
     size_t n = a->data.dims(1);
     array mean = bmean(a->data);
-    array dx = grad - bsum(grad) / n;
+    array dx = grad - bsum(grad, 1) / n;
 
     update_grad(a, dx);
 }
