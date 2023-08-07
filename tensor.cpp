@@ -28,6 +28,16 @@ static void bwd_add(tensor *a, tensor *b, array &grad, array &y)
     update_grad(b, grad);
 }
 
+static array fwd_addf(tensor *a, tensor *b)
+{
+    return a->data + b->scalar;
+}
+
+static void bwd_addf(tensor *a, tensor *b, array &grad, array &y)
+{
+    update_grad(a, grad);
+}
+
 static array fwd_sub(tensor *a, tensor *b)
 {
     return a->data - b->data;
@@ -37,6 +47,16 @@ static void bwd_sub(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, grad);
     update_grad(b, -grad);
+}
+
+static array fwd_subf(tensor *a, tensor *b)
+{
+    return a->data - b->scalar;
+}
+
+static void bwd_subf(tensor *a, tensor *b, array &grad, array &y)
+{
+    update_grad(a, grad);
 }
 
 static array fwd_mul(tensor *a, tensor *b)
@@ -50,6 +70,16 @@ static void bwd_mul(tensor *a, tensor *b, array &grad, array &y)
     update_grad(b, a->data * grad);
 }
 
+static array fwd_mulf(tensor *a, tensor *b)
+{
+    return a->data * b->scalar;
+}
+
+static void bwd_mulf(tensor *a, tensor *b, array &grad, array &y)
+{
+    update_grad(a, b->scalar * grad);
+}
+
 static array fwd_div(tensor *a, tensor *b)
 {
     return a->data / b->data;
@@ -59,6 +89,16 @@ static void bwd_div(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, grad / b->data);
     update_grad(b, -grad * y / b->data);
+}
+
+static array fwd_divf(tensor *a, tensor *b)
+{
+    return a->data / b->scalar;
+}
+
+static void bwd_divf(tensor *a, tensor *b, array &grad, array &y)
+{
+    update_grad(a, grad / b->scalar);
 }
 
 static array fwd_matmul(tensor *a, tensor *b)
@@ -341,6 +381,10 @@ OPERATOR(softmax);
 OPERATOR(submean);
 OPERATOR(bstd);
 OPERATOR(pow);
+OPERATOR(addf);
+OPERATOR(subf);
+OPERATOR(mulf);
+OPERATOR(divf);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
     { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
@@ -354,6 +398,10 @@ METHOD(operator+, const array &a, a, add)
 METHOD(operator-, const array &a, a, sub)
 METHOD(operator*, const array &a, a, mul)
 METHOD(operator/, const array &a, a, div)
+METHOD(operator+, float f, f, addf)
+METHOD(operator-, float f, f, subf)
+METHOD(operator*, float f, f, mulf)
+METHOD(operator/, float f, f, divf)
 METHOD(log, void, nullptr, log)
 METHOD(exp, void, nullptr, exp)
 METHOD(relu, void, nullptr, relu)

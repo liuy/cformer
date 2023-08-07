@@ -32,12 +32,13 @@ struct tensor {
     array mean = array();  // first moment for Adam
     array variance = array(); // second moment for Adam
     tensor *lhs = nullptr; // left-hand-side of the expression
+    tensor *rhs = nullptr; // right-hand-side of the expression
+    oper *op = nullptr;    // operator of the expression
     union {
         int dim;           // parameter of lhs
         float p;           // parameter of pow oper
+        float scalar;      // parameter of scalar
     };
-    tensor *rhs = nullptr; // right-hand-side of the expression
-    oper *op = nullptr;    // operator of the expression
     bool no_delete = true; // whether to delete the tensor by .destroy_graph()
     bool need_grad = false; // whether to compute the gradient of the tensor
     bool data_computed = true; // whether the data of the tensor is computed
@@ -46,6 +47,7 @@ struct tensor {
         dim = t.dim; op = t.op; need_grad = t.need_grad; data_computed = t.data_computed; if (!t.no_delete) delete &t;
 
     tensor() = default;
+    tensor(const float f) : scalar(f) {} // for float leaf tensor
     tensor(const array &a, bool ng = false) : data(a), need_grad(ng)
         {if (need_grad) grad = af::constant(0, a.dims());} // for leaf tensor
     tensor(const tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
@@ -53,6 +55,9 @@ struct tensor {
         : lhs(a), rhs(b), op(o), no_delete(false), need_grad(true), data_computed(false) {}
     tensor(tensor *a, const array &b, oper *o) // create non-leaf node from an array
         : lhs(a), op(o), no_delete(false), need_grad(true), data_computed(false) { rhs = new tensor(b); rhs->no_delete = false; }
+    tensor(tensor *a, const float f, oper *o) // create a leaf node from a float
+        : lhs(a), op(o), no_delete(false), need_grad(true), data_computed(false)
+        { rhs = new tensor(f); rhs->no_delete = false; }
     void operator=(tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     //~tensor() { printf("~tensor() %p\n", this); }
 #undef copy_delete
@@ -110,6 +115,10 @@ struct tensor {
     tensor& operator-(const array &a);
     tensor& operator*(const array &a);
     tensor& operator/(const array &a);
+    tensor& operator+(float f);
+    tensor& operator-(float f);
+    tensor& operator*(float f);
+    tensor& operator/(float f);
     void operator+=(tensor &t);
     tensor& operator-(void);
 };

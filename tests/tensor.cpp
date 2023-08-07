@@ -318,6 +318,17 @@ TEST(Tensor, add_sub_mul_div_array)
     y.destroy_graph();
 }
 
+TEST(Tensor, add_sub_mul_div_float)
+{
+    tensor x(af::constant(3, 1, 3), true);
+    tensor &mul = x * 2.0f;
+    tensor &y = (mul + 3.0f) / (mul - 3.0f);
+    y.backward();
+    array_eq(y.data, {3.0f, 3.0f, 3.0f});
+    array_eq(x.grad, {-1.333333f, -1.333333f, -1.333333f});
+    y.destroy_graph();
+}
+
 TEST(Tensor, pow)
 {
     tensor x(af::constant(3, 1, 3), true);
