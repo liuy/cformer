@@ -40,7 +40,7 @@ struct tensor {
     oper *op = nullptr;    // operator of the expression
     bool no_delete = true; // whether to delete the tensor by .destroy_graph()
     bool need_grad = false; // whether to compute the gradient of the tensor
-    bool data_computed = false; // whether the data of non-leaf node is computed
+    bool data_computed = true; // whether the data of the tensor is computed
 
 #define copy_delete(t) data = t.data; grad = t.grad; velocity  = t.velocity ; lhs = t.lhs; rhs = t.rhs; \
         dim = t.dim; op = t.op; need_grad = t.need_grad; data_computed = t.data_computed; if (!t.no_delete) delete &t;
@@ -50,9 +50,9 @@ struct tensor {
         {if (need_grad) grad = af::constant(0, a.dims());} // for leaf tensor
     tensor(const tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
-        : lhs(a), rhs(b), op(o), no_delete(false), need_grad(true) {}
-    tensor(tensor *a, const array &b, oper *o) // create a leaf node from an array
-        : lhs(a), op(o), no_delete(false), need_grad(true) { rhs = new tensor(b); rhs->no_delete = false; }
+        : lhs(a), rhs(b), op(o), no_delete(false), need_grad(true), data_computed(false) {}
+    tensor(tensor *a, const array &b, oper *o) // create non-leaf node from an array
+        : lhs(a), op(o), no_delete(false), need_grad(true), data_computed(false) { rhs = new tensor(b); rhs->no_delete = false; }
     void operator=(tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!
     //~tensor() { printf("~tensor() %p\n", this); }
 #undef copy_delete

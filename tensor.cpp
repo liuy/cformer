@@ -384,11 +384,11 @@ void tensor::operator+= (tensor &t)
 
 void tensor::forward(void)
 {
-    if (data_computed || is_leaf())
+    if (data_computed)
         return;
-    if (lhs && !lhs->is_leaf())
+    if (lhs && !lhs->data_computed)
         lhs->forward();
-    if (rhs && !rhs->is_leaf())
+    if (rhs && !rhs->data_computed)
         rhs->forward();
     cf_debug("%s", op->name);
     data = op->forward_fn(lhs, rhs);
