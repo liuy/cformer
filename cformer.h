@@ -102,6 +102,10 @@ struct tensor {
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
     tensor& operator/(tensor &t);
+    tensor& operator+(const array &a);
+    tensor& operator-(const array &a);
+    tensor& operator*(const array &a);
+    tensor& operator/(const array &a);
     void operator+=(tensor &t);
     tensor& operator-(void);
 };

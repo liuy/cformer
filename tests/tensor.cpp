@@ -306,3 +306,14 @@ TEST(Tensor, submean_bstd)
     array_eq(x.grad, {0.0f, -632.455566f, 0.0f, 0.0f, 0.0f, 632.455444f});
     y.destroy_graph();
 }
+
+TEST(Tensor, add_sub_mul_div_array)
+{
+    tensor x(af::constant(3, 1, 3), true);
+    tensor &mul = x * af::constant(2, 1, 3);
+    tensor &y = (mul + af::constant(3, 1, 3)) / (mul - af::constant(3, 1, 3));
+    y.backward();
+    array_eq(y.data, {3.0f, 3.0f, 3.0f});
+    array_eq(x.grad, {-1.333333f, -1.333333f, -1.333333f});
+    y.destroy_graph();
+}
