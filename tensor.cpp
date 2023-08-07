@@ -410,25 +410,24 @@ void tensor::backward(const array &g)
     do_backward(this);
 }
 
-static void get_nonleafs(tensor *t, std::unordered_set<tensor *> &nonleafs)
+static void prepare_graph_nodes(tensor *t, std::unordered_set<tensor *> &nodes)
 {
-    if (!t->is_leaf())
-        nonleafs.insert(t);
+    if (!t->no_delete)
+        nodes.insert(t);
     if (t->lhs)
-        get_nonleafs(t->lhs, nonleafs);
+        prepare_graph_nodes(t->lhs, nodes);
     if (t->rhs)
-        get_nonleafs(t->rhs, nonleafs);
+        prepare_graph_nodes(t->rhs, nodes);
 }
 
 void tensor::destroy_graph(void)
 {
     // non-leaf tensors might be shared by other nodes in the graph, so we need
     // a set to avoid deleting them multiple times.
-    std::unordered_set<tensor *> nonleafs;
-    get_nonleafs(this, nonleafs);
-    for (auto t : nonleafs)
-        if (!t->no_delete)
-            delete t;
+    std::unordered_set<tensor *> nodes;
+    prepare_graph_nodes(this, nodes);
+    for (auto t : nodes)
+        delete t;
 }
 
 static void do_print(const std::string& prefix, tensor* node, bool left, bool root=false)
