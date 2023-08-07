@@ -317,3 +317,20 @@ TEST(Tensor, add_sub_mul_div_array)
     array_eq(x.grad, {-1.333333f, -1.333333f, -1.333333f});
     y.destroy_graph();
 }
+
+TEST(Tensor, pow)
+{
+    tensor x(af::constant(3, 1, 3), true);
+    tensor y = x.pow(2);
+    y.backward();
+    array_eq(y.data, {9.0f, 9.0f, 9.0f});
+    array_eq(x.grad, {6.0f, 6.0f, 6.0f});
+    y.destroy_graph();
+    x.zero_grad();
+
+    y = x.pow(0.5);
+    y.backward();
+    array_eq(y.data, {1.732051f, 1.732051f, 1.732051f});
+    array_eq(x.grad, {0.288675f, 0.288675f, 0.288675f});
+    y.destroy_graph();
+}

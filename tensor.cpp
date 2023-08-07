@@ -309,6 +309,16 @@ static void bwd_submean(tensor *a, tensor *dummy, array &grad, array &y)
     update_grad(a, dx);
 }
 
+static array fwd_pow(tensor *a, tensor *dummy)
+{
+    return af::pow(a->data, a->p);
+}
+
+static void bwd_pow(tensor *a, tensor *dummy, array &grad, array &y)
+{
+    update_grad(a, grad * a->p * af::pow(a->data, a->p - 1));
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -330,6 +340,7 @@ OPERATOR(logsm);
 OPERATOR(softmax);
 OPERATOR(submean);
 OPERATOR(bstd);
+OPERATOR(pow);
 
 #define METHOD(name, arg, new_arg, op, ...) tensor& tensor::name(arg) \
     { __VA_ARGS__ ; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
@@ -357,6 +368,7 @@ METHOD(logsm, void, nullptr, logsm)
 METHOD(softmax, void, nullptr, softmax)
 METHOD(bstd, void, nullptr, bstd)
 METHOD(submean, void, nullptr, submean)
+METHOD(pow, float p, nullptr, pow, this->p = p)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)

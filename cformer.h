@@ -32,7 +32,10 @@ struct tensor {
     array mean = array();  // first moment for Adam
     array variance = array(); // second moment for Adam
     tensor *lhs = nullptr; // left-hand-side of the expression
-    int dim = 0;           // parameter of lhs
+    union {
+        int dim;           // parameter of lhs
+        float p;           // parameter of pow oper
+    };
     tensor *rhs = nullptr; // right-hand-side of the expression
     oper *op = nullptr;    // operator of the expression
     bool no_delete = true; // whether to delete the tensor by .destroy_graph()
@@ -98,6 +101,7 @@ struct tensor {
     tensor& logsm(void);
     tensor& submean(void);
     tensor& bstd(void);
+    tensor& pow(float);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
