@@ -247,6 +247,12 @@ struct BatchNorm1d : layer {
     tensor& forward(tensor &x, bool training = false) override;
 };
 
+struct dropout : layer {
+    float p;
+    dropout(float prob = 0.2) : p(prob) {name = "Dropout";}
+    tensor& forward(tensor &x, bool training = false) override;
+};
+
 struct optimizer {
     std::vector<tensor*> params;
     optimizer(std::vector<tensor*> p)
@@ -295,7 +301,8 @@ struct seqnet {
     seqnet(std::initializer_list<layer*> list) { for (auto i : list) add(i); }
     ~seqnet() { for (auto i : layers) delete i; }
     inline void add(layer *l)
-    { layers.push_back(l); params.push_back(&l->weight); if (!l->no_bias) params.push_back(&l->bias); }
+    {layers.push_back(l); if (!l->weight.data.isempty()) params.push_back(&l->weight);
+     if (!l->no_bias && !l->bias.data.isempty()) params.push_back(&l->bias);}
     void train(data &set, trainer &tr);
     tensor& forward(tensor &x, bool training = false);
     inline tensor operator()(tensor &x) {

@@ -44,10 +44,29 @@ tensor& BatchNorm1d::forward(tensor &x, bool training)
 
         tensor &y = x.submean(0) / x.bstd(0);
         return y * weight.expandas(x) + bias.expandas(x);
-    } else {
-        tensor& y = (x - moving_mean.expandas(x)) / (moving_vari.expandas(x) + epsilon).pow(0.5);
-        return y * weight.expandas(x) + bias.expandas(x);
     }
+    tensor &y = (x - moving_mean.expandas(x)) / (moving_vari.expandas(x) + epsilon).pow(0.5);
+    return y * weight.expandas(x) + bias.expandas(x);
+}
+
+/**
+ * Dropout is a regularization technique to prevent overfitting by randomly dropping out some
+ * neurons in the network. It is implemented by multiplying the output of a previous activation
+ * layer by a mask of 0s and 1s. Divide the output by (1 - p) to keep the sum of the output
+ * unchanged.
+ *
+ * Note: dropout is only applied during training, not during inference.
+ * see more details at https://www.cs.toronto.edu/~hinton/absps/JMLRdropout.pdf
+ */
+tensor& dropout::forward(tensor& x, bool training)
+{
+    if (training) {
+        x.forward();
+        auto mask = af::randu(x.data.dims()) > p;
+        tensor &y = x * mask / (1.0 - p);
+        return y;
+    }
+    return x;
 }
 
 tensor& seqnet::forward(tensor &x, bool training)
@@ -194,7 +213,8 @@ void seqnet::summary(void)
         size_t np = param_num(layer);
         total_params += np;
         printf("| %-5d | %-7s | %-5lld | %-6lld | %-4s | %-10s | %-'10ld |\n", i++, layer->name,
-            layer->weight.data.dims(0), layer->weight.data.dims(1), layer->no_bias ? "None" : "Yes",
+            layer->weight.data.isempty() ? 0 : layer->weight.data.dims(0),
+            layer->weight.data.isempty() ? 0 : layer->weight.data.dims(1), layer->no_bias ? "None" : "Yes",
             activ_name[layer->act], np);
     }
     printf("+-------+---------+-------+--------+------+------------+------------+\n");
