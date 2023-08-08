@@ -23,6 +23,33 @@ tensor& linear::forward(tensor &x, bool training)
     }
 }
 
+/**
+ * Batch Normalization (BN) is a technique to improve the training speed and performance
+ * of a neural network. It is a essentially a normalization of the output of a previous
+ * activation layer by subtracting the batch mean and dividing by the batch standard deviation.
+ * It is implemented by adding two trainable parameters, gamma(weight) and beta(bias), to the previous
+ * activation layer. So the output of the BN layer is given by the following equation:
+ *     y = gamma * (x - mean) / sqrt(variance + epsilon) + beta
+ * see more details at https://arxiv.org/pdf/1502.03167.pdf
+ */
+tensor& BatchNorm1d::forward(tensor &x, bool training)
+{
+    if (training) {
+        x.forward();
+        // Note: mean() and var() call on batch dimension
+        array mean = af::mean(x.data, 0);
+        array vari = af::var(x.data, AF_VARIANCE_POPULATION, 0);
+        moving_mean.data = momentum * moving_mean.data + (1 - momentum) * mean;
+        moving_vari.data = momentum * moving_vari.data + (1 - momentum) * vari;
+
+        tensor &y = x.submean(0) / x.bstd(0);
+        return y * weight.bdim0(x) + bias.bdim0(x);
+    } else {
+        tensor& y = (x - moving_mean.bdim0(x)) / (moving_vari.bdim0(x) + epsilon).pow(0.5);
+        return y * weight.bdim0(x) + bias.bdim0(x);
+    }
+}
+
 tensor& seqnet::forward(tensor &x, bool training)
 {
     tensor *y = &x;

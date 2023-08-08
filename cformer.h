@@ -149,6 +149,16 @@ static inline array xavier_normal(int in, int out, const af::dtype ty = f32)
     return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / (in + out));
 }
 
+static inline array zeros(int in, int out, const af::dtype ty = f32)
+{
+    return af::constant(0, {in, out}, ty);
+}
+
+static inline array ones(int in, int out, const af::dtype ty = f32)
+{
+    return af::constant(1, {in, out}, ty);
+}
+
 typedef void (*data_reader_t)(struct data &);
 
 struct transform {
@@ -199,10 +209,10 @@ enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax, LogSoftmax};
 
 struct layer {
     const char *name;
-    bool no_bias;
+    bool no_bias = false;
     tensor weight = tensor(array(), true);
-    tensor bias = tensor (array(), true);
-    activ_t act;
+    tensor bias = tensor(array(), true);
+    activ_t act = None;
     virtual ~layer() = default;
     virtual tensor& forward(tensor &x, bool = false) = 0;
     inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
@@ -222,6 +232,18 @@ struct linear : layer {
      */
     {name = "Linear"; act = a; no_bias = nb; weight.assign_data(init(in, out, t));
     if (!no_bias) bias.assign_data(af::transpose(init(out, 1, t)));}
+    tensor& forward(tensor &x, bool training = false) override;
+};
+
+struct BatchNorm1d : layer {
+    float momentum;
+    float epsilon;
+    tensor moving_mean;
+    tensor moving_vari;
+    BatchNorm1d(int dim, float m = 0.9, float e = 1e-5, const af::dtype t = f32)
+        : momentum(m), epsilon(e)
+        {name = "BN1d"; weight.assign_data(ones(1, dim, t)); bias.assign_data(zeros(1, dim, t));
+         moving_mean.assign_data(zeros(1, dim, t)); moving_vari.assign_data(ones(1, dim, t));}
     tensor& forward(tensor &x, bool training = false) override;
 };
 
@@ -299,6 +321,15 @@ static inline void write_data(std::ofstream &file, void *data, size_t size)
     file.write(reinterpret_cast<char*>(data), size);
 }
 
+static inline array zeros_like(array &a)
+{
+    return af::constant(0, a.dims(), a.type());
+}
+
+static inline array ones_like(array &a)
+{
+    return af::constant(1, a.dims(), a.type());
+}
 
 static inline array argmax(const array &a, int dim = 1)
 {
