@@ -13,6 +13,22 @@ static inline array bsum(const array &a, int dim)
     return af::tile(af::sum(a, dim), dims);
 }
 
+static inline array bmean(const array &a, int dim)
+{
+    af::dim4 dims = {1, 1, 1, 1};
+    dims[dim] = a.dims(dim);
+
+    return af::tile(af::mean(a, dim), dims);
+}
+
+static inline array bvar(const array &a, int dim)
+{
+    af::dim4 dims = {1, 1, 1, 1};
+    dims[dim] = a.dims(dim);
+
+    return af::tile(af::var(a, AF_VARIANCE_POPULATION, dim), dims);
+}
+
 // Leaf tensors might be shared by non-leaf tensors in the graph.
 // So we need to accumulate the gradients for leaf tensors.
 static inline void update_grad(tensor *t, const array &grad)
@@ -303,18 +319,6 @@ static void bwd_softmax(tensor *a, tensor *dummy, array &grad, array &y)
 }
 
 // Support dim=1 only right now.
-static inline array bmean(const array &a)
-{
-    return af::tile(af::mean(a, 1), 1, a.dims(1));
-}
-
-// Support dim=1 only right now.
-static inline array bvar(const array &a)
-{
-    return af::tile(af::var(a, AF_VARIANCE_POPULATION, 1), 1, a.dims(1));
-}
-
-// Support dim=1 only right now.
 static inline array bstd(const array &a)
 {
     return af::tile(af::stdev(a, AF_VARIANCE_POPULATION, 1), 1, a.dims(1));
@@ -322,7 +326,7 @@ static inline array bstd(const array &a)
 
 static array fwd_bstd(tensor *a, tensor *dummy)
 {
-    array var = bvar(a->data);
+    array var = bvar(a->data, 1);
     // bwd_bstd will divide by std, so replace 0 with 1e-5, which is from pytorch's batchnorm
     af::replace(var, var >= 1e-5, 1e-5);
     return af::sqrt(var);
@@ -331,7 +335,7 @@ static array fwd_bstd(tensor *a, tensor *dummy)
 static void bwd_bstd(tensor *a, tensor *dummy, array &grad, array &y)
 {
     size_t n = a->data.dims(1);
-    array mean = bmean(a->data);
+    array mean = bmean(a->data, 1);
     array bn = (a->data - mean) / y;
     array dx = bsum(grad, 1) * bn / n;
 
@@ -340,13 +344,13 @@ static void bwd_bstd(tensor *a, tensor *dummy, array &grad, array &y)
 
 static array fwd_submean(tensor *a, tensor *dummy)
 {
-    return a->data - bmean(a->data);
+    return a->data - bmean(a->data, 1);
 }
 
 static void bwd_submean(tensor *a, tensor *dummy, array &grad, array &y)
 {
     size_t n = a->data.dims(1);
-    array mean = bmean(a->data);
+    array mean = bmean(a->data, 1);
     array dx = grad - bsum(grad, 1) / n;
 
     update_grad(a, dx);
@@ -517,4 +521,3 @@ void tensor::print_graph(void)
 {
     do_print("", this, false, true);
 }
-
