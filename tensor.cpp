@@ -250,16 +250,16 @@ static void bwd_neg(tensor *a, tensor *dummy, array &grad, array &y)
 }
 
 // For x@w + b to work, b is broadcasted to the same shape as x@w (batch_size, out).
-static array fwd_bdim0(tensor *a, tensor *b)
+static array fwd_expandas(tensor *a, tensor *b)
 {
     int d = b->data.dims(0);
-    cf_debug("bdim0: %d", d);
+    cf_debug("expandas: %d", d);
     assert(a->data.dims(0) == 1 && d != 0);
     return af::tile(a->data, d);
 }
 
-// y = bdim0(x) => dx = sum(dy, dim=0)
-static void bwd_bdim0(tensor *a, tensor *b, array &grad, array &y)
+// y = expandas(x) => dx = sum(dy, dim=0)
+static void bwd_expandas(tensor *a, tensor *b, array &grad, array &y)
 {
     update_grad(a, af::sum(grad, 0));
 }
@@ -382,7 +382,7 @@ OPERATOR(sigmoid);
 OPERATOR(tanh);
 OPERATOR(bsum);
 OPERATOR(sum);
-OPERATOR(bdim0);
+OPERATOR(expandas);
 OPERATOR(bmax);
 OPERATOR(lse);
 OPERATOR(logsm);
@@ -418,7 +418,7 @@ METHOD(sigmoid, void, nullptr, sigmoid)
 METHOD(tanh, void, nullptr, tanh)
 METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
 METHOD(sum, int dim, nullptr, sum, this->dim = dim)
-METHOD(bdim0, tensor &t, &t, bdim0)
+METHOD(expandas, tensor &t, &t, expandas)
 METHOD(bmax, int dim, nullptr, bmax, this->dim = dim)
 METHOD(lse, void, nullptr, lse)
 METHOD(logsm, void, nullptr, logsm)

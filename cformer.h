@@ -99,7 +99,7 @@ struct tensor {
     /// @param dim The dimension along which the add operation occurs.
     tensor& bsum(int);
     tensor& sum(int);
-    tensor& bdim0(tensor &t);
+    tensor& expandas(tensor &t);
     tensor& bmax(int);
     /// @brief Oper fusion: LogSumExp along the dimension 1
     tensor& lse(void);

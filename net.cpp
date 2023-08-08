@@ -4,7 +4,7 @@ tensor& linear::forward(tensor &x, bool training)
 {
     tensor &y = x.matmul(weight);
     if (!no_bias)
-        y += bias.bdim0(x);
+        y += bias.expandas(x);
     switch(act) {
     case ReLU:
         return y.relu();
@@ -43,10 +43,10 @@ tensor& BatchNorm1d::forward(tensor &x, bool training)
         moving_vari.data = momentum * moving_vari.data + (1 - momentum) * vari;
 
         tensor &y = x.submean(0) / x.bstd(0);
-        return y * weight.bdim0(x) + bias.bdim0(x);
+        return y * weight.expandas(x) + bias.expandas(x);
     } else {
-        tensor& y = (x - moving_mean.bdim0(x)) / (moving_vari.bdim0(x) + epsilon).pow(0.5);
-        return y * weight.bdim0(x) + bias.bdim0(x);
+        tensor& y = (x - moving_mean.expandas(x)) / (moving_vari.expandas(x) + epsilon).pow(0.5);
+        return y * weight.expandas(x) + bias.expandas(x);
     }
 }
 
