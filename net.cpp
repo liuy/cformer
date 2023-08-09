@@ -127,46 +127,40 @@ static inline void update_loss_metrics(float loss, float accu, size_t epoch, boo
  */
 void SGD::step(void)
 {
-    for (auto &t : params) {
+    for (auto &p : params) {
         if (weight_decay > 0.0)
-            t->grad += weight_decay * t->data;
+            p.param->grad += weight_decay * p.param->data;
 
         if (momentum > 0.0) {
-            if (unlikely(t->velocity.isempty()))
-                t->velocity = af::constant(0, t->grad.dims());
-
             // Andrew NG's version works a little bit better than PyTorch's but we choose pytorch's
             // version for simplicity (less computation)
-            t->velocity  = momentum * t->velocity  + t->grad;
-            t->data -= nesterov ? lr * (momentum * t->velocity + t->grad) : lr * t->velocity;
-        } else
-            t->data -= lr * t->grad;
+            p.velocity  = momentum * p.velocity + p.param->grad;
+            p.param->data -= nesterov ? lr * (momentum * p.velocity + p.param->grad) : lr * p.velocity;
 
-        t->zero_grad();
+        } else
+            p.param->data -= lr * p.param->grad;
+
+        p.param->zero_grad();
     }
 }
 
 // For more details, see https://arxiv.org/abs/1412.6980
 void Adam::step(void)
 {
-    for (auto &t : params) {
+    for (auto &p : params) {
+        static int t = 0;
+        t++;
+
         if (weight_decay > 0.0)
-            t->grad += weight_decay * t->data;
+            p.param->grad += weight_decay * p.param->data;
 
-        if (unlikely(t->mean.isempty()))
-            t->mean = af::constant(0, t->grad.dims());
-        if (unlikely(t->variance.isempty()))
-            t->variance = af::constant(0, t->grad.dims());
+        p.mean = beta1 * p.mean + (1 - beta1) * p.param->grad;
+        p.variance = beta2 * p.variance + (1 - beta2) * p.param->grad * p.param->grad;
+        array mean_hat = p.mean / (1 - pow(beta1, t));
+        array variance_hat = p.variance / (1 - pow(beta2, t));
+        p.param->data -= lr * mean_hat / (af::sqrt(variance_hat) + epsilon);
 
-        t->mean = beta1 * t->mean + (1 - beta1) * t->grad;
-        t->variance = beta2 * t->variance + (1 - beta2) * t->grad * t->grad;
-        // array mean_hat = t->mean / (1 - beta1);
-        // array variance_hat = t->variance / (1 - beta2);
-        // t->data -= lr * mean_hat / (af::sqrt(variance_hat) + epsilon);
-        // comment out bias correction for simplicity
-        t->data -= lr * t->mean / (af::sqrt(t->variance) + epsilon);
-
-        t->zero_grad();
+        p.param->zero_grad();
     }
 }
 
@@ -193,7 +187,6 @@ void seqnet::train(data &set, trainer &tr)
         if (set.shuffle)
             set.shuffle_train_idx();
     }
-    tr.optimizer.finish();
 }
 
 void seqnet::summary(void)

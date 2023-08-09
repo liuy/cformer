@@ -28,9 +28,6 @@ struct oper {
 struct tensor {
     array data = array();  // evaluated data of the tensor
     array grad = array();  // gradient of the tensor
-    array velocity = array(); // velocity for SGD with momentum
-    array mean = array();  // first moment for Adam
-    array variance = array(); // second moment for Adam
     tensor *lhs = nullptr; // left-hand-side of the expression
     tensor *rhs = nullptr; // right-hand-side of the expression
     oper *op = nullptr;    // operator of the expression
@@ -43,8 +40,8 @@ struct tensor {
     bool need_grad = false; // whether to compute the gradient of the tensor
     bool data_computed = true; // whether the data of the tensor is computed
 
-#define copy_delete(t) data = t.data; grad = t.grad; velocity  = t.velocity ; lhs = t.lhs; rhs = t.rhs; \
-        dim = t.dim; op = t.op; need_grad = t.need_grad; data_computed = t.data_computed; if (!t.no_delete) delete &t;
+#define copy_delete(t) data = t.data; grad = t.grad; lhs = t.lhs; rhs = t.rhs; dim = t.dim; op = t.op; \
+        need_grad = t.need_grad; data_computed = t.data_computed; if (!t.no_delete) delete &t;
 
     tensor() = default;
     tensor(const float f) : scalar(f) {} // for float leaf tensor
@@ -254,34 +251,43 @@ struct dropout : layer {
 };
 
 struct optimizer {
-    std::vector<tensor*> params;
-    optimizer(std::vector<tensor*> p)
-        : params(p) {}
     virtual void step(void) = 0;
-    virtual void finish(void) = 0;
+};
+
+struct sgd_param{
+    tensor *param;
+    array velocity;
 };
 
 struct SGD : optimizer {
+    std::vector<sgd_param> params;
     float lr;
     float momentum;
     float weight_decay;
     bool nesterov;
     SGD(std::vector<tensor*> &p, float l = 5e-4, float m = 0.8, bool n=false, float wd = 0.0)
-        : optimizer(p), lr(l), momentum(m), nesterov(n), weight_decay(wd) {}
+        : lr(l), momentum(m), nesterov(n), weight_decay(wd)
+        {for (auto t : p) params.push_back({t, m ? af::constant(0, t->grad.dims()) : array()});}
     void step(void) override;
-    void finish(void) override {for (auto &p : params) {p->velocity = array();}}
+};
+
+struct adam_param {
+    tensor *param;
+    array mean;
+    array variance;
 };
 
 struct Adam : optimizer {
+    std::vector<adam_param> params;
     float lr;
     float beta1;
     float beta2;
     float epsilon;
     float weight_decay;
-    Adam(std::vector<tensor*> &p, float l = 1e-4, float wd =0.0, float b1 = 0.9, float b2 = 0.999, float e = 1e-8)
-        : optimizer(p), lr(l), weight_decay(wd), beta1(b1), beta2(b2), epsilon(e) {}
+    Adam(std::vector<tensor*> &p, float l = 1e-3, float wd =0.0, float b1 = 0.9, float b2 = 0.999, float e = 1e-8)
+        : lr(l), weight_decay(wd), beta1(b1), beta2(b2), epsilon(e)
+        { for (auto t : p) params.push_back({t, af::constant(0, t->grad.dims()), af::constant(0, t->grad.dims())}); }
     void step(void) override;
-    void finish(void) override {for (auto &p : params) {p->mean = array(); p->variance = array();}}
 };
 
 typedef tensor& (*loss_fn_t)(tensor &y_true, tensor &y_pred);
