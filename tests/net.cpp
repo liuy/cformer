@@ -7,13 +7,13 @@ static void test_reader(struct data &d)
     d.train_y.data = onehot(argmax(af::randu(60, 10)));
 }
 
-TEST(Net, linear_BatchNorm1d_dropout)
+TEST(Net, Linear_BatchNorm1d_Dropout)
 {
     seqnet model {
-        new linear(300, 100, ReLU),
+        new Linear(300, 100, ReLU),
         new BatchNorm1d(100),
-        new dropout(0.1),
-        new linear(100, 10, LogSoftmax),
+        new Dropout(0.1),
+        new Linear(100, 10, LogSoftmax),
     };
     //printf("%s\n", ::testing::UnitTest::GetInstance()->original_working_dir());
     data set(test_reader, false);

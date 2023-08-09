@@ -1,6 +1,6 @@
 #include "cformer.h"
 
-tensor& linear::forward(tensor &x, bool training)
+tensor& Linear::forward(tensor &x, bool training)
 {
     tensor &y = x.matmul(weight);
     if (!no_bias)
@@ -55,10 +55,10 @@ tensor& BatchNorm1d::forward(tensor &x, bool training)
  * layer by a mask of 0s and 1s. Divide the output by (1 - p) to keep the sum of the output
  * unchanged.
  *
- * Note: dropout is only applied during training, not during inference.
- * see more details at https://www.cs.toronto.edu/~hinton/absps/JMLRdropout.pdf
+ * Note: Dropout is only applied during training, not during inference.
+ * see more details at https://www.cs.toronto.edu/~hinton/absps/JMLRDropout.pdf
  */
-tensor& dropout::forward(tensor& x, bool training)
+tensor& Dropout::forward(tensor& x, bool training)
 {
     if (training) {
         x.forward();

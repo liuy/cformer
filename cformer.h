@@ -215,9 +215,9 @@ struct layer {
     inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
 };
 
-struct linear : layer {
+struct Linear : layer {
     initializer_t init;
-    linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
+    Linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
         : init(a == ReLU ? kaiming_uniform : xavier_uniform)
     /** Notes on bias initialization:
      * Generally, there are 4 recommended ways to initialize the bias:
@@ -244,9 +244,9 @@ struct BatchNorm1d : layer {
     tensor& forward(tensor &x, bool training = false) override;
 };
 
-struct dropout : layer {
+struct Dropout : layer {
     float p;
-    dropout(float prob = 0.2) : p(prob) {name = "Dropout";}
+    Dropout(float prob = 0.2) : p(prob) {name = "Dropout";}
     tensor& forward(tensor &x, bool training = false) override;
 };
 
