@@ -342,6 +342,35 @@ TEST(Tensor, submean_bstd)
     y.destroy_graph();
 }
 
+TEST(Tensor, batchnorm)
+{
+    tensor x(array({2,3}, {1.0f, 3.0f, 2.0f, 3.0f, 3.0f, 3.0f}), true);
+    tensor y = x.batchnorm(1);
+    y.backward();
+    array_eq(y.data, {-1.224744f, 0.0f, 0.0f, 0.0f, 1.224744f, 0.0f});
+    array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+    x.zero_grad();
+
+    y.backward(array({2,3}, {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f}));
+    af_print(y.data, 8);
+    af_print(x.grad, 8);
+    array_eq(y.data, {-1.224744f, 0.0f, 0.0f, 0.0f, 1.224744f, 0.0f});
+    array_eq(x.grad, {0.0f, -632.455566f, 0.0f, 0.0f, 0.0f, 632.455566f}); // TODO: why is this different from the previous test?
+    y.destroy_graph();
+    x.zero_grad();
+
+    y = x.batchnorm(0);
+    y.backward();
+    array_eq(y.data, {-1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f});
+    array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+    x.zero_grad();
+
+    y.backward(array({2,3}, {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f}));
+    array_eq(y.data, {-1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f});
+    array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, -158.113891f, 158.113891f});
+    y.destroy_graph();
+}
+
 TEST(Tensor, add_sub_mul_div_array)
 {
     tensor x(af::constant(3, 1, 3), true);

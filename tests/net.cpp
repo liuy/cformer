@@ -30,5 +30,5 @@ TEST(Net, Linear_BatchNorm1d_Dropout)
     model.train(set, tr);
     tensor y_pred = model(set.train_x);
     printf("Train accuracy: %.4f\n", categorical_accuracy(set.train_y, y_pred));
-    ASSERT_GT(categorical_accuracy(set.train_y, y_pred), 0.7);
+    ASSERT_GT(categorical_accuracy(set.train_y, y_pred), 0.9);
 }

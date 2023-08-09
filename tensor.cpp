@@ -358,6 +358,25 @@ static void bwd_submean(tensor *a, tensor *dummy, array &grad, array &y)
     update_grad(a, dx);
 }
 
+static array fwd_batchnorm(tensor *a, tensor *dummy)
+{
+    array mean = bmean(a->data, a->dim);
+    array var = bvar(a->data, a->dim);
+    af::replace(var, var >= 1e-5, 1e-5);
+    array std = af::sqrt(var);
+    return (a->data - mean) / std;
+}
+
+static void bwd_batchnorm(tensor *a, tensor *dummy, array &grad, array &y)
+{
+    size_t n = a->data.dims(a->dim);
+    array var = bvar(a->data, a->dim);
+    af::replace(var, var >= 1e-5, 1e-5);
+    array std = af::sqrt(var);
+    array dx = (grad - bsum(grad, a->dim) / n - y * bsum(grad * y, a->dim) / n) / std;
+    update_grad(a, dx);
+}
+
 static array fwd_pow(tensor *a, tensor *dummy)
 {
     return af::pow(a->data, a->p);
@@ -389,6 +408,7 @@ OPERATOR(logsm);
 OPERATOR(softmax);
 OPERATOR(submean);
 OPERATOR(bstd);
+OPERATOR(batchnorm);
 OPERATOR(pow);
 OPERATOR(addf);
 OPERATOR(subf);
@@ -425,6 +445,7 @@ METHOD(logsm, void, nullptr, logsm)
 METHOD(softmax, void, nullptr, softmax)
 METHOD(bstd, int dim, nullptr, bstd, this->dim = dim)
 METHOD(submean, int dim, nullptr, submean, this->dim = dim)
+METHOD(batchnorm, int dim, nullptr, batchnorm, this->dim = dim)
 METHOD(pow, float p, nullptr, pow, this->p = p)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c

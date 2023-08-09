@@ -42,7 +42,7 @@ tensor& BatchNorm1d::forward(tensor &x, bool training)
         moving_mean.data = momentum * moving_mean.data + (1 - momentum) * mean;
         moving_vari.data = momentum * moving_vari.data + (1 - momentum) * vari;
 
-        tensor &y = x.submean(0) / x.bstd(0);
+        tensor &y = x.batchnorm(0);
         return y * weight.expandas(x) + bias.expandas(x);
     }
     tensor &y = (x - moving_mean.expandas(x)) / (moving_vari.expandas(x) + epsilon).pow(0.5);

@@ -103,6 +103,7 @@ struct tensor {
     tensor& logsm(void);
     tensor& submean(int);
     tensor& bstd(int);
+    tensor& batchnorm(int);
     tensor& pow(float);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
