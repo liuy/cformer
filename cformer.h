@@ -52,7 +52,7 @@ struct tensor {
         : lhs(a), rhs(b), op(o), no_delete(false), need_grad(true), data_computed(false) {}
     tensor(tensor *a, const array &b, oper *o) // create non-leaf node from an array
         : lhs(a), op(o), no_delete(false), need_grad(true), data_computed(false) { rhs = new tensor(b); rhs->no_delete = false; }
-    tensor(tensor *a, const float f, oper *o) // create a leaf node from a float
+    tensor(tensor *a, const float f, oper *o) // create non-leaf node from a float
         : lhs(a), op(o), no_delete(false), need_grad(true), data_computed(false)
         { rhs = new tensor(f); rhs->no_delete = false; }
     void operator=(tensor &t) {copy_delete(t);} // for root tensor mostly. USE WITH CAUTION!

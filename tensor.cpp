@@ -477,8 +477,10 @@ static void do_backward(tensor *t)
 {
     if (t->is_leaf())
         return;
-    if (t->op && t->op->backward_fn)
+    if (t->op->backward_fn)
         t->op->backward_fn(t->lhs, t->rhs, t->grad, t->data);
+    else
+        return; // no backward for the rest of the branch
     if (t->lhs)
         do_backward(t->lhs);
     if (t->rhs)
@@ -532,7 +534,8 @@ static void do_print(const std::string& prefix, tensor* node, bool left, bool ro
         std::cout << "Root ";
     else
         std::cout << (left ? "|---" : "+---");
-    std::cout << (node->is_leaf() ? "Leaf" : node->op->name) << (node->no_delete ? "" : "*") << std::endl;
+    std::cout << (node->is_leaf() ? "Leaf" : node->op->name) << (node->no_delete ? "" : "*")
+        << (node->need_grad ? "" : "!") << std::endl;
 
     if (node->lhs)
         do_print(prefix + (left ? "|    " : "     "), node->lhs, true);
