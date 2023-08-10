@@ -59,13 +59,13 @@ void mnist_reader(struct data &d)
 {
     size_t rows, cols;
     array a = read_mnist_images("data/mnist/train-images-idx3-ubyte", d.nrow, d.ncol);
-    d.train_x.assign_data(a);
+    d.train_x.init(a);
     a = read_mnist_labels("data/mnist/train-labels-idx1-ubyte");
-    d.train_y.assign_data(a);
+    d.train_y.init(a);
     a = read_mnist_images("data/mnist/t10k-images-idx3-ubyte", rows, cols);
-    d.test_x.assign_data(a);
+    d.test_x.init(a);
     a = read_mnist_labels("data/mnist/t10k-labels-idx1-ubyte");
-    d.test_y.assign_data(a);
+    d.test_y.init(a);
 }
 
 /**
@@ -132,8 +132,8 @@ void data::load(std::initializer_list<transform *> transforms)
         joint_y = af::join(0, train_y.data, joint_y);
         delete tf;
     }
-    train_x.assign_data(joint_x);
-    train_y.assign_data(joint_y);
+    train_x.init(joint_x);
+    train_y.init(joint_y);
 
     printf("%lld training samples, %lld test samples (Used %.1fs)\n",
            train_x.data.dims(0), test_x.data.dims(0), af::timer::stop());
@@ -149,6 +149,6 @@ void data::get_mini_batch(tensor &x, tensor &y, size_t idx, size_t batch_size)
 {
     size_t start = idx * batch_size;
     size_t end = MIN(start + batch_size, train_x.data.dims(0));
-    x.assign_data(train_x.data.rows(start, end - 1));
-    y.assign_data(train_y.data.rows(start, end - 1));
+    x.init(train_x.data.rows(start, end - 1));
+    y.init(train_y.data.rows(start, end - 1));
 }

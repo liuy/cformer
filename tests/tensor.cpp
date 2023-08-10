@@ -54,9 +54,9 @@ TEST(Tensor, exp_bsum)
     EXPECT_FLOAT_EQ(af::sum<float>(y.data), 2);
     y.destroy_graph();
 
-    a.assign_data(af::randu(1, 3));
-    b.assign_data(af::randu(1, 3));
-    c.assign_data(af::randu(1, 3));
+    a.init(af::randu(1, 3));
+    b.init(af::randu(1, 3));
+    c.init(af::randu(1, 3));
     tensor &z = test_softmax(b-a*c, 0);
     z.backward();
     EXPECT_NEAR(af::sum<float>(a.grad), 0, 1e-6);

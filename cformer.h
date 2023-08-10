@@ -83,7 +83,7 @@ struct tensor {
     void destroy_graph(void);
     void print_graph(void);
     inline void zero_grad(void) {grad = 0;}
-    inline void assign_data(const array &a){data = a; if (need_grad) grad = af::constant(0, a.dims());}
+    inline void init(const array &a){data = a; if (need_grad) grad = af::constant(0, a.dims());}
     inline bool is_leaf(void) {return lhs == nullptr && rhs == nullptr;}
     tensor& matmul(tensor &t);
     tensor& log(void);
@@ -228,8 +228,8 @@ struct Linear : layer {
      * 4. just any small random value
      * You can actually set layer.bias directly if you want to override the default.
      */
-    {name = "Linear"; act = a; no_bias = nb; weight.assign_data(init(in, out, t));
-    if (!no_bias) bias.assign_data(af::transpose(init(out, 1, t)));}
+    {name = "Linear"; act = a; no_bias = nb; weight.init(init(in, out, t));
+    if (!no_bias) bias.init(af::transpose(init(out, 1, t)));}
     tensor& forward(tensor &x, bool training = false) override;
 };
 
@@ -240,8 +240,8 @@ struct BatchNorm1d : layer {
     tensor moving_vari;
     BatchNorm1d(int dim, float m = 0.9, float e = 1e-5, const af::dtype t = f32)
         : momentum(m), epsilon(e)
-        {name = "BN1d"; weight.assign_data(ones(1, dim, t)); bias.assign_data(zeros(1, dim, t));
-         moving_mean.assign_data(zeros(1, dim, t)); moving_vari.assign_data(ones(1, dim, t));}
+        {name = "BN1d"; weight.init(ones(1, dim, t)); bias.init(zeros(1, dim, t));
+         moving_mean.init(zeros(1, dim, t)); moving_vari.init(ones(1, dim, t));}
     tensor& forward(tensor &x, bool training = false) override;
 };
 
