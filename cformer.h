@@ -107,6 +107,13 @@ struct tensor {
     tensor& bstd(int);
     tensor& batchnorm(int);
     tensor& pow(float);
+    /**
+     * move tensor to a temporary tensor.
+     *
+     * y = y + x; will cause Directed Cyclic Graph problem.
+     * y = y.move() + x; solve the problem.
+     */
+    tensor& move(void);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);

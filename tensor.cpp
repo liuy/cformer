@@ -448,9 +448,9 @@ METHOD(submean, int dim, nullptr, submean, this->param.dim = dim)
 METHOD(batchnorm, int dim, nullptr, batchnorm, this->param.dim = dim)
 METHOD(pow, float p, nullptr, pow, this->param.p = p)
 
-/* FIXME: this is a hack to copy tensor blindly. can we do better? */
 static inline tensor& move_tensor(tensor &t)
 {
+/* FIXME: this is a hack to copy tensor blindly. can we do better? */
     tensor *r = new tensor();
     r->data = t.data;
     r->grad = t.grad;
@@ -461,16 +461,20 @@ static inline tensor& move_tensor(tensor &t)
     r->param = t.param;
     r->need_grad = t.need_grad;
     r->data_computed = t.data_computed;
-    r->no_delete = false; /* suppose to be a non-leaf node */
+    r->no_delete = false; // we need to delete this tensor
     return *r;
+}
+
+tensor& tensor::move(void)
+{
+    return move_tensor(*this);
 }
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)
 {
-    tensor &tmp = move_tensor(*this);
     // Note = is a copy_delete operation. can we swap it to avoid extra copy?
-    *this = tmp + t;
+    *this = this->move() + t;
 }
 
 void tensor::forward(void)
