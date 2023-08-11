@@ -192,8 +192,8 @@ static void bwd_relu(tensor *a, tensor *dummy, array &grad, array &y)
 static array fwd_bsum(tensor *a, tensor *dummy)
 {
     af::dim4 dims = {1, 1, 1, 1};
-    dims[a->dim] = a->data.dims(a->dim);
-    return af::tile(af::sum(a->data, a->dim), dims);
+    dims[a->param.dim] = a->data.dims(a->param.dim);
+    return af::tile(af::sum(a->data, a->param.dim), dims);
 }
 
 // y = brad(sum(x)), dy = y.grad.
@@ -202,8 +202,8 @@ static array fwd_bsum(tensor *a, tensor *dummy)
 static void bwd_bsum(tensor *a, tensor *dummy, array &grad, array &y)
 {
     af::dim4 dims = {1, 1, 1, 1};
-    dims[a->dim] = a->data.dims(a->dim);
-    update_grad(a, af::tile(af::sum(grad, a->dim), dims));
+    dims[a->param.dim] = a->data.dims(a->param.dim);
+    update_grad(a, af::tile(af::sum(grad, a->param.dim), dims));
 }
 
 static array fwd_sigmoid(tensor *a, tensor *dummy)
@@ -228,13 +228,13 @@ static void bwd_tanh(tensor *a, tensor *dummy, array &grad, array &y)
 
 static array fwd_sum(tensor *a, tensor *dummy)
 {
-    return af::sum(a->data, a->dim);
+    return af::sum(a->data, a->param.dim);
 }
 
 static void bwd_sum(tensor *a, tensor *dummy, array &grad, array &y)
 {
     af::dim4 dims = {1, 1, 1, 1};
-    dims[a->dim] = a->data.dims(a->dim);
+    dims[a->param.dim] = a->data.dims(a->param.dim);
     array t = af::tile(grad, dims);
     update_grad(a, t);
 }
@@ -267,7 +267,7 @@ static void bwd_expandas(tensor *a, tensor *b, array &grad, array &y)
 // Suppport dim=1 right now, TODO: need refine onehot to support more dims
 static array fwd_bmax(tensor *a, tensor *dummy)
 {
-    assert(a->dim == 1);
+    assert(a->param.dim == 1);
     return bmax(a->data);
 }
 
@@ -275,8 +275,8 @@ static array fwd_bmax(tensor *a, tensor *dummy)
 static void bwd_bmax(tensor *a, tensor *dummpy, array &grad, array &y)
 {
     array dummy, idx;
-    af::max(dummy, idx, a->data, a->dim);
-    update_grad(a, bsum(grad, 1) * onehot(idx, grad.dims(a->dim)));
+    af::max(dummy, idx, a->data, a->param.dim);
+    update_grad(a, bsum(grad, 1) * onehot(idx, grad.dims(a->param.dim)));
 }
 
 // LogSumExp(x) trick to avoid overflow/underflow,
@@ -326,7 +326,7 @@ static inline array bstd(const array &a)
 
 static array fwd_bstd(tensor *a, tensor *dummy)
 {
-    array var = bvar(a->data, a->dim);
+    array var = bvar(a->data, a->param.dim);
     // bwd_bstd will divide by std, so replace 0 with 1e-5, which is from pytorch's batchnorm
     af::replace(var, var >= 1e-5, 1e-5);
     return af::sqrt(var);
@@ -334,7 +334,7 @@ static array fwd_bstd(tensor *a, tensor *dummy)
 
 static void bwd_bstd(tensor *a, tensor *dummy, array &grad, array &y)
 {
-    int d = a->dim;
+    int d = a->param.dim;
     size_t n = a->data.dims(d);
     array mean = bmean(a->data, d);
     array bn = (a->data - mean) / y;
@@ -345,12 +345,12 @@ static void bwd_bstd(tensor *a, tensor *dummy, array &grad, array &y)
 
 static array fwd_submean(tensor *a, tensor *dummy)
 {
-    return a->data - bmean(a->data, a->dim);
+    return a->data - bmean(a->data, a->param.dim);
 }
 
 static void bwd_submean(tensor *a, tensor *dummy, array &grad, array &y)
 {
-    int d = a->dim;
+    int d = a->param.dim;
     size_t n = a->data.dims(d);
     array mean = bmean(a->data, d);
     array dx = grad - bsum(grad, d) / n;
@@ -360,8 +360,8 @@ static void bwd_submean(tensor *a, tensor *dummy, array &grad, array &y)
 
 static array fwd_batchnorm(tensor *a, tensor *dummy)
 {
-    array mean = bmean(a->data, a->dim);
-    array var = bvar(a->data, a->dim);
+    array mean = bmean(a->data, a->param.dim);
+    array var = bvar(a->data, a->param.dim);
     af::replace(var, var >= 1e-5, 1e-5);
     array std = af::sqrt(var);
     return (a->data - mean) / std;
@@ -369,22 +369,22 @@ static array fwd_batchnorm(tensor *a, tensor *dummy)
 
 static void bwd_batchnorm(tensor *a, tensor *dummy, array &grad, array &y)
 {
-    size_t n = a->data.dims(a->dim);
-    array var = bvar(a->data, a->dim);
+    size_t n = a->data.dims(a->param.dim);
+    array var = bvar(a->data, a->param.dim);
     af::replace(var, var >= 1e-5, 1e-5);
     array std = af::sqrt(var);
-    array dx = (grad - bsum(grad, a->dim) / n - y * bsum(grad * y, a->dim) / n) / std;
+    array dx = (grad - bsum(grad, a->param.dim) / n - y * bsum(grad * y, a->param.dim) / n) / std;
     update_grad(a, dx);
 }
 
 static array fwd_pow(tensor *a, tensor *dummy)
 {
-    return af::pow(a->data, a->p);
+    return af::pow(a->data, a->param.p);
 }
 
 static void bwd_pow(tensor *a, tensor *dummy, array &grad, array &y)
 {
-    update_grad(a, grad * a->p * af::pow(a->data, a->p - 1));
+    update_grad(a, grad * a->param.p * af::pow(a->data, a->param.p - 1));
 }
 
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
@@ -436,17 +436,17 @@ METHOD(exp, void, nullptr, exp)
 METHOD(relu, void, nullptr, relu)
 METHOD(sigmoid, void, nullptr, sigmoid)
 METHOD(tanh, void, nullptr, tanh)
-METHOD(bsum, int dim, nullptr, bsum, this->dim = dim)
-METHOD(sum, int dim, nullptr, sum, this->dim = dim)
+METHOD(bsum, int dim, nullptr, bsum, this->param.dim = dim)
+METHOD(sum, int dim, nullptr, sum, this->param.dim = dim)
 METHOD(expandas, tensor &t, &t, expandas)
-METHOD(bmax, int dim, nullptr, bmax, this->dim = dim)
+METHOD(bmax, int dim, nullptr, bmax, this->param.dim = dim)
 METHOD(lse, void, nullptr, lse)
 METHOD(logsm, void, nullptr, logsm)
 METHOD(softmax, void, nullptr, softmax)
-METHOD(bstd, int dim, nullptr, bstd, this->dim = dim)
-METHOD(submean, int dim, nullptr, submean, this->dim = dim)
-METHOD(batchnorm, int dim, nullptr, batchnorm, this->dim = dim)
-METHOD(pow, float p, nullptr, pow, this->p = p)
+METHOD(bstd, int dim, nullptr, bstd, this->param.dim = dim)
+METHOD(submean, int dim, nullptr, submean, this->param.dim = dim)
+METHOD(batchnorm, int dim, nullptr, batchnorm, this->param.dim = dim)
+METHOD(pow, float p, nullptr, pow, this->param.p = p)
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)
@@ -455,7 +455,7 @@ void tensor::operator+= (tensor &t)
     tensor *tmp = new tensor(this->lhs, this->rhs, this->op); // no_delete = false
     tmp->data = this->data;
     tmp->grad = this->grad;
-    tmp->dim = this->dim;
+    tmp->param = this->param;
     // Note = is a copy_delete operation. can we swap it to avoid extra copy?
     *this = *tmp + t;
 }

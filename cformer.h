@@ -25,22 +25,24 @@ struct oper {
         : name(n), forward_fn(ffn), backward_fn(bfn) {}
 };
 
+struct param {
+    int dim;           // parameter of lhs
+    float p;           // parameter of pow oper
+};
+
 struct tensor {
     array data = array();  // evaluated data of the tensor
     array grad = array();  // gradient of the tensor
+    float scalar;      // parameter of scalar
     tensor *lhs = nullptr; // left-hand-side of the expression
     tensor *rhs = nullptr; // right-hand-side of the expression
     oper *op = nullptr;    // operator of the expression
-    union {
-        int dim;           // parameter of lhs
-        float p;           // parameter of pow oper
-        float scalar;      // parameter of scalar
-    };
+    struct param param;    // parameter of the oper
     bool no_delete = true; // whether to delete the tensor by .destroy_graph()
     bool need_grad = false; // whether to compute the gradient of the tensor
     bool data_computed = true; // whether the data of the tensor is computed
 
-#define copy_delete(t) data = t.data; grad = t.grad; lhs = t.lhs; rhs = t.rhs; dim = t.dim; op = t.op; \
+#define copy_delete(t) data = t.data; grad = t.grad; lhs = t.lhs; rhs = t.rhs; param = t.param; op = t.op; \
         need_grad = t.need_grad; data_computed = t.data_computed; if (!t.no_delete) delete &t;
 
     tensor() = default;
