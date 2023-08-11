@@ -318,12 +318,6 @@ static void bwd_softmax(tensor *a, tensor *dummy, array &grad, array &y)
     update_grad(a, y * (grad - bsum(grad * y, 1)));
 }
 
-// Support dim=1 only right now.
-static inline array bstd(const array &a)
-{
-    return af::tile(af::stdev(a, AF_VARIANCE_POPULATION, 1), 1, a.dims(1));
-}
-
 static array fwd_bstd(tensor *a, tensor *dummy)
 {
     array var = bvar(a->data, a->param.dim);
