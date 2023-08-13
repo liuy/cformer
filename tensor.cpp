@@ -46,100 +46,100 @@ static inline void update_grad(tensor *t, const array &grad)
     t->grad = t->is_leaf() ? t->grad + grad : grad;
 }
 
-static array fwd_add(tensor *a, tensor *b)
+static array fwd_add(tensor *a, tensor *b, tensor *p)
 {
     return a->data + b->data;
 }
 
-static void bwd_add(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_add(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, grad);
-    update_grad(b, grad);
+    update_grad(a, p->grad);
+    update_grad(b, p->grad);
 }
 
-static array fwd_addf(tensor *a, tensor *b)
+static array fwd_addf(tensor *a, tensor *b, tensor *p)
 {
     return a->data + b->scalar;
 }
 
-static void bwd_addf(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_addf(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, grad);
+    update_grad(a, p->grad);
 }
 
-static array fwd_sub(tensor *a, tensor *b)
+static array fwd_sub(tensor *a, tensor *b, tensor *p)
 {
     return a->data - b->data;
 }
 
-static void bwd_sub(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_sub(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, grad);
-    update_grad(b, -grad);
+    update_grad(a, p->grad);
+    update_grad(b,-p->grad);
 }
 
-static array fwd_subf(tensor *a, tensor *b)
+static array fwd_subf(tensor *a, tensor *b, tensor *p)
 {
     return a->data - b->scalar;
 }
 
-static void bwd_subf(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_subf(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, grad);
+    update_grad(a, p->grad);
 }
 
-static array fwd_mul(tensor *a, tensor *b)
+static array fwd_mul(tensor *a, tensor *b, tensor *p)
 {
     return a->data * b->data;
 }
 
-static void bwd_mul(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_mul(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, b->data * grad);
-    update_grad(b, a->data * grad);
+    update_grad(a, b->data * p->grad);
+    update_grad(b, a->data * p->grad);
 }
 
-static array fwd_mulf(tensor *a, tensor *b)
+static array fwd_mulf(tensor *a, tensor *b, tensor *p)
 {
     return a->data * b->scalar;
 }
 
-static void bwd_mulf(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_mulf(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, b->scalar * grad);
+    update_grad(a, b->scalar * p->grad);
 }
 
-static array fwd_div(tensor *a, tensor *b)
+static array fwd_div(tensor *a, tensor *b, tensor *p)
 {
     return a->data / b->data;
 }
 
-static void bwd_div(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_div(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, grad / b->data);
-    update_grad(b, -grad * y / b->data);
+    update_grad(a, p->grad / b->data);
+    update_grad(b,-p->grad * p->data / b->data);
 }
 
-static array fwd_divf(tensor *a, tensor *b)
+static array fwd_divf(tensor *a, tensor *b, tensor *p)
 {
     return a->data / b->scalar;
 }
 
-static void bwd_divf(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_divf(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, grad / b->scalar);
+    update_grad(a, p->grad / b->scalar);
 }
 
-static array fwd_matmul(tensor *a, tensor *b)
+static array fwd_matmul(tensor *a, tensor *b, tensor *p)
 {
     return af::matmul(a->data, b->data);
 }
 
 // y = a @ b => dy = y.grad, da = y.grad @ b.T, db = a.T @ y.grad
-static void bwd_matmul(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_matmul(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, af::matmulNT(grad, b->data));
-    update_grad(b, af::matmulTN(a->data, grad));
+    update_grad(a, af::matmulNT(p->grad, b->data));
+    update_grad(b, af::matmulTN(a->data, p->grad));
 }
 
 /**
@@ -150,107 +150,107 @@ static void bwd_matmul(tensor *a, tensor *b, array &grad, array &y)
  * pytorch and tensorflow add EPSILON in *_cross_entropy functions to avoid log(0).
  * we clip value(v < EPSILON) with EPSILON here.
  */
-static array fwd_log(tensor *a, tensor *dummy)
+static array fwd_log(tensor *a, tensor *dummy, tensor *p)
 {
 #define EPSILON 1e-8
     af::replace(a->data, a->data >= EPSILON, EPSILON);
     return af::log(a->data);
 }
 
-static void bwd_log(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_log(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, grad / a->data);
+    update_grad(a, p->grad / a->data);
 }
 
-static array fwd_exp(tensor *a, tensor *dummy)
+static array fwd_exp(tensor *a, tensor *dummy, tensor *p)
 {
     return af::exp(a->data);
 }
 
-static void bwd_exp(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_exp(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, grad * y);
+    update_grad(a, p->grad * p->data);
 }
 
-static array fwd_relu(tensor *a, tensor *dummy)
+static array fwd_relu(tensor *a, tensor *dummy, tensor *p)
 {
     array zero = af::constant(0, a->data.dims(), a->data.type());
     return af::max(a->data, zero);
 }
 
 // y = relu(x) => dx = dy * (x > 0)
-static void bwd_relu(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_relu(tensor *a, tensor *dummy, tensor *p)
 {
     array zero = af::constant(0, a->data.dims(), a->data.type());
-    update_grad(a, af::select(a->data > zero, grad, zero));
+    update_grad(a, af::select(a->data > zero, p->grad, zero));
 }
 
 // y = broadcast(sum(x)), sum(x) over dim and then bradcast it to same shape as x.
 // sum() redues the dimension of x along dim to 1 and brad() matmul it back by a broadcasting matrix.
 // broadcast(a) = B0 @ a if dim = 0, B0 = ones(a.dims[0], 1)
 // broadcast(a) = a @ B1 if dim = 1, B1 = ones(1, a.dims[1])
-static array fwd_bsum(tensor *a, tensor *dummy)
+static array fwd_bsum(tensor *a, tensor *dummy, tensor *p)
 {
     af::dim4 dims = {1, 1, 1, 1};
-    dims[a->param.dim] = a->data.dims(a->param.dim);
-    return af::tile(af::sum(a->data, a->param.dim), dims);
+    dims[p->param.dim] = a->data.dims(p->param.dim);
+    return af::tile(af::sum(a->data, p->param.dim), dims);
 }
 
 // y = brad(sum(x)), dy = y.grad.
 // dx = y.grad @ ones(d, d) if dim = 1, d = x.dims[1]
 // dx = ones(d, d) @ y.grad if dim = 0, d = x.dims[0]
-static void bwd_bsum(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_bsum(tensor *a, tensor *dummy, tensor *p)
 {
     af::dim4 dims = {1, 1, 1, 1};
-    dims[a->param.dim] = a->data.dims(a->param.dim);
-    update_grad(a, af::tile(af::sum(grad, a->param.dim), dims));
+    dims[p->param.dim] = a->data.dims(p->param.dim);
+    update_grad(a, af::tile(af::sum(p->grad, p->param.dim), dims));
 }
 
-static array fwd_sigmoid(tensor *a, tensor *dummy)
+static array fwd_sigmoid(tensor *a, tensor *dummy, tensor *p)
 {
     return af::sigmoid(a->data);
 }
 
-static void bwd_sigmoid(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_sigmoid(tensor *a, tensor *dummy, tensor *p)
 {
-    update_grad(a, grad * y * (1 - y));
+    update_grad(a, p->grad * p->data * (1 - p->data));
 }
 
-static array fwd_tanh(tensor *a, tensor *dummy)
+static array fwd_tanh(tensor *a, tensor *dummy, tensor *p)
 {
     return af::tanh(a->data);
 }
 
-static void bwd_tanh(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_tanh(tensor *a, tensor *dummy, tensor *p)
 {
-    update_grad(a, grad * (1 - y * y));
+    update_grad(a, p->grad * (1 - p->data * p->data));
 }
 
-static array fwd_sum(tensor *a, tensor *dummy)
+static array fwd_sum(tensor *a, tensor *dummy, tensor *p)
 {
-    return af::sum(a->data, a->param.dim);
+    return af::sum(a->data, p->param.dim);
 }
 
-static void bwd_sum(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_sum(tensor *a, tensor *dummy, tensor *p)
 {
     af::dim4 dims = {1, 1, 1, 1};
-    dims[a->param.dim] = a->data.dims(a->param.dim);
-    array t = af::tile(grad, dims);
+    dims[p->param.dim] = a->data.dims(p->param.dim);
+    array t = af::tile(p->grad, dims);
     update_grad(a, t);
 }
 
-static array fwd_neg(tensor *a, tensor *dummy)
+static array fwd_neg(tensor *a, tensor *dummy, tensor *p)
 {
     return -a->data;
 }
 
-static void bwd_neg(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_neg(tensor *a, tensor *dummy, tensor *p)
 {
-    update_grad(a, -grad);
+    update_grad(a,-p->grad);
 }
 
 // For x@w + b to work, b is broadcasted to the same shape as x@w (batch_size, out).
-static array fwd_expandas(tensor *a, tensor *b)
+static array fwd_expandas(tensor *a, tensor *b, tensor *p)
 {
     int d = b->data.dims(0);
     cf_debug("expandas: %d", d);
@@ -259,126 +259,127 @@ static array fwd_expandas(tensor *a, tensor *b)
 }
 
 // y = expandas(x) => dx = sum(dy, dim=0)
-static void bwd_expandas(tensor *a, tensor *b, array &grad, array &y)
+static void bwd_expandas(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, af::sum(grad, 0));
+    update_grad(a, af::sum(p->grad, 0));
 }
 
 // Suppport dim=1 right now, TODO: need refine onehot to support more dims
-static array fwd_bmax(tensor *a, tensor *dummy)
+static array fwd_bmax(tensor *a, tensor *dummy, tensor *p)
 {
-    assert(a->param.dim == 1);
+    assert(p->param.dim == 1);
     return bmax(a->data);
 }
 
 // y = bmax(x) => dx = bsum(dy) * onehot(max_idx)
-static void bwd_bmax(tensor *a, tensor *dummpy, array &grad, array &y)
+static void bwd_bmax(tensor *a, tensor *dummpy, tensor *p)
 {
     array dummy, idx;
-    af::max(dummy, idx, a->data, a->param.dim);
-    update_grad(a, bsum(grad, 1) * onehot(idx, grad.dims(a->param.dim)));
+    af::max(dummy, idx, a->data, p->param.dim);
+    update_grad(a, bsum(p->grad, 1) * onehot(idx, p->grad.dims(p->param.dim)));
 }
 
 // LogSumExp(x) trick to avoid overflow/underflow,
 // see https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
-static array fwd_lse(tensor *a, tensor *dummy)
+static array fwd_lse(tensor *a, tensor *dummy, tensor *p)
 {
     return af::log(bsum(af::exp(a->data - bmax(a->data)), 1)) + bmax(a->data);
 }
 
 // y = lse(x) => dx = bsum(dy) * exp(x) / bsum(exp(x))
-static void bwd_lse(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_lse(tensor *a, tensor *dummy, tensor *p)
 {
     array exp = af::exp(a->data - bmax(a->data));
-    update_grad(a, bsum(grad, 1) * exp / bsum(exp, 1));
+    update_grad(a, bsum(p->grad, 1) * exp / bsum(exp, 1));
 }
 
-static array fwd_logsm(tensor *a, tensor *dummy)
+static array fwd_logsm(tensor *a, tensor *dummy, tensor *p)
 {
     return a->data - bmax(a->data) - af::log(bsum(af::exp(a->data - bmax(a->data)), 1));
 }
 
-static void bwd_logsm(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_logsm(tensor *a, tensor *dummy, tensor *p)
 {
     array exp = af::exp(a->data - bmax(a->data));
-    update_grad(a, grad - bsum(grad, 1) * exp / bsum(exp, 1));
+    update_grad(a, p->grad - bsum(p->grad, 1) * exp / bsum(exp, 1));
 }
 
-static array fwd_softmax(tensor *a, tensor *dummy)
+static array fwd_softmax(tensor *a, tensor *dummy, tensor *p)
 {
     array exp = af::exp(a->data - bmax(a->data));
     return exp / bsum(exp, 1);
 }
 
 // y = softmax(x) => dx = softmax(x) * (dy - bsum(dy * softmax(x)))
-static void bwd_softmax(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_softmax(tensor *a, tensor *dummy, tensor *p)
 {
     // Note: higher level oper might modify output of softmax to avoid 0 (such as log)
     // so seems that using 'y' is more numerically accurate than recomputing from 'a->data'
-    update_grad(a, y * (grad - bsum(grad * y, 1)));
+    update_grad(a, p->data * (p->grad - bsum(p->grad * p->data, 1)));
 }
 
-static array fwd_bstd(tensor *a, tensor *dummy)
+static array fwd_bstd(tensor *a, tensor *dummy, tensor *p)
 {
-    array var = bvar(a->data, a->param.dim);
+    array var = bvar(a->data, p->param.dim);
     // bwd_bstd will divide by std, so replace 0 with 1e-5, which is from pytorch's batchnorm
     af::replace(var, var >= 1e-5, 1e-5);
     return af::sqrt(var);
 }
 
-static void bwd_bstd(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_bstd(tensor *a, tensor *dummy, tensor *p)
 {
-    int d = a->param.dim;
+    int d = p->param.dim;
     size_t n = a->data.dims(d);
     array mean = bmean(a->data, d);
-    array bn = (a->data - mean) / y;
-    array dx = bsum(grad, d) * bn / n;
+    array bn = (a->data - mean) / p->data;
+    array dx = bsum(p->grad, d) * bn / n;
 
     update_grad(a, dx);
 }
 
-static array fwd_submean(tensor *a, tensor *dummy)
+static array fwd_submean(tensor *a, tensor *dummy, tensor *p)
 {
-    return a->data - bmean(a->data, a->param.dim);
+    return a->data - bmean(a->data, p->param.dim);
 }
 
-static void bwd_submean(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_submean(tensor *a, tensor *dummy, tensor *p)
 {
-    int d = a->param.dim;
+    int d = p->param.dim;
     size_t n = a->data.dims(d);
     array mean = bmean(a->data, d);
-    array dx = grad - bsum(grad, d) / n;
+    array dx = p->grad - bsum(p->grad, d) / n;
 
     update_grad(a, dx);
 }
 
-static array fwd_batchnorm(tensor *a, tensor *dummy)
+static array fwd_batchnorm(tensor *a, tensor *dummy, tensor *p)
 {
-    array mean = bmean(a->data, a->param.dim);
-    array var = bvar(a->data, a->param.dim);
+    array mean = bmean(a->data, p->param.dim);
+    array var = bvar(a->data, p->param.dim);
     af::replace(var, var >= 1e-5, 1e-5);
     array std = af::sqrt(var);
     return (a->data - mean) / std;
 }
 
-static void bwd_batchnorm(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_batchnorm(tensor *a, tensor *dummy, tensor *p)
 {
-    size_t n = a->data.dims(a->param.dim);
-    array var = bvar(a->data, a->param.dim);
+    array y = p->data;
+    size_t n = a->data.dims(p->param.dim);
+    array var = bvar(a->data, p->param.dim);
     af::replace(var, var >= 1e-5, 1e-5);
     array std = af::sqrt(var);
-    array dx = (grad - bsum(grad, a->param.dim) / n - y * bsum(grad * y, a->param.dim) / n) / std;
+    array dx = (p->grad - bsum(p->grad, p->param.dim) / n - y * bsum(p->grad * y, p->param.dim) / n) / std;
     update_grad(a, dx);
 }
 
-static array fwd_pow(tensor *a, tensor *dummy)
+static array fwd_pow(tensor *a, tensor *dummy, tensor *p)
 {
-    return af::pow(a->data, a->param.p);
+    return af::pow(a->data, p->param.p);
 }
 
-static void bwd_pow(tensor *a, tensor *dummy, array &grad, array &y)
+static void bwd_pow(tensor *a, tensor *dummy, tensor *p)
 {
-    update_grad(a, grad * a->param.p * af::pow(a->data, a->param.p - 1));
+    update_grad(a, p->grad * p->param.p * af::pow(a->data, p->param.p - 1));
 }
 
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
@@ -411,7 +412,7 @@ OPERATOR(divf);
 
 #define VA_LIST(...) __VA_ARGS__
 #define METHOD(name, args, new_arg, op, stmts...) tensor& tensor::name(VA_LIST args) \
-    { stmts; tensor *r = new tensor(this, new_arg, &oper_##op); return *r;}
+    { tensor *r = new tensor(this, new_arg, &oper_##op); stmts; return *r;}
 METHOD(matmul, (tensor &t), &t, matmul)
 METHOD(operator+, (tensor &t), &t, add)
 METHOD(operator-, (tensor &t), &t, sub)
@@ -431,17 +432,17 @@ METHOD(exp, (void), nullptr, exp)
 METHOD(relu, (void), nullptr, relu)
 METHOD(sigmoid, (void), nullptr, sigmoid)
 METHOD(tanh, (void), nullptr, tanh)
-METHOD(bsum, (int dim), nullptr, bsum, this->param.dim = dim)
-METHOD(sum, (int dim), nullptr, sum, this->param.dim = dim)
+METHOD(bsum, (int dim), nullptr, bsum, r->param.dim = dim)
+METHOD(sum, (int dim), nullptr, sum, r->param.dim = dim)
 METHOD(expandas, (tensor &t), &t, expandas)
-METHOD(bmax, (int dim), nullptr, bmax, this->param.dim = dim)
+METHOD(bmax, (int dim), nullptr, bmax, r->param.dim = dim)
 METHOD(lse, (void), nullptr, lse)
 METHOD(logsm, (void), nullptr, logsm)
 METHOD(softmax, (void), nullptr, softmax)
-METHOD(bstd, (int dim), nullptr, bstd, this->param.dim = dim)
-METHOD(submean, (int dim), nullptr, submean, this->param.dim = dim)
-METHOD(batchnorm, (int dim), nullptr, batchnorm, this->param.dim = dim)
-METHOD(pow, (float p), nullptr, pow, this->param.p = p)
+METHOD(bstd, (int dim), nullptr, bstd, r->param.dim = dim)
+METHOD(submean, (int dim), nullptr, submean, r->param.dim = dim)
+METHOD(batchnorm, (int dim), nullptr, batchnorm, r->param.dim = dim)
+METHOD(pow, (float p), nullptr, pow, r->param.p = p)
 
 static inline tensor& detach_tensor(tensor &t)
 {
@@ -481,7 +482,7 @@ void tensor::forward(void)
     if (rhs && !rhs->data_computed)
         rhs->forward();
     cf_debug("%s", op->name);
-    data = op->forward_fn(lhs, rhs);
+    data = op->forward_fn(lhs, rhs, this);
     data_computed = true;
 }
 
@@ -490,7 +491,7 @@ static void do_backward(tensor *t)
     if (t->is_leaf())
         return;
     if (t->op->backward_fn)
-        t->op->backward_fn(t->lhs, t->rhs, t->grad, t->data);
+        t->op->backward_fn(t->lhs, t->rhs, t);
     else
         return; // no backward for the rest of the branch
     if (t->lhs)

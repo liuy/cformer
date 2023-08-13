@@ -14,8 +14,8 @@ using af::array;
 
 struct tensor;
 
-typedef array (*forward_fn_t)(tensor *, tensor *);
-typedef void (*backward_fn_t)(tensor *, tensor *, array &, array &);
+typedef array (*forward_fn_t)(tensor *, tensor *, tensor *);
+typedef void (*backward_fn_t)(tensor *, tensor *, tensor *);
 
 struct oper {
     const char *name = nullptr;          // name of the operator
