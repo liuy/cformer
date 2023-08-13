@@ -429,3 +429,33 @@ TEST(Tensor, detach)
     array_eq(z.data, {7.0f, 7.0f, 7.0f});
     array_eq(x.grad, {2.0f, 2.0f, 2.0f});
 }
+
+TEST(Tensor, slice)
+{
+    tensor x(af::iota({2,3*2}), true);
+    tensor &x1 = x.slice(1, 0, 2) * 2;
+    tensor &x2 = x.slice(1, 3, 5).pow(2);
+    tensor y = x1 + x2;
+    y.backward();
+    array_eq(y.data, {36.0f, 51.0f, 68.0f, 87.0f, 108.0f, 131.0f});
+    array_eq(x.grad, {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 12.0f, 14.0f, 16.0f, 18.0f, 20.0f, 22.0f});
+    y.destroy_graph();
+    x.zero_grad();
+
+    tensor &x3 = x.slice(0, 0, 0) * 2;
+    tensor &x4 = x.slice(0, 1, 1).pow(2);
+    y = x3 + x4;
+    y.backward();
+    array_eq(y.data, {1.0f, 13.0f, 33.0f, 61.0f, 97.0f, 141.0f});
+    array_eq(x.grad, {2.0f, 2.0f, 2.0f, 6.0f, 2.0f, 10.0f, 2.0f, 14.0f, 2.0f, 18.0f, 2.0f, 22.0f});
+    y.destroy_graph();
+    x.zero_grad();
+
+    tensor &x5 = (x + 1).slice(1, 0, 2) * 2;
+    tensor &x6 = (x + 1).slice(1, 3, 5).pow(2);
+    y = x5 + x6;
+    y.backward();
+    array_eq(y.data, {51.0f, 68.0f, 87.0f, 108.0f, 131.0f, 156.0f});
+    array_eq(x.grad, {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 14.0f, 16.0f, 18.0f, 20.0f, 22.0f, 24.0f});
+    y.destroy_graph();
+}

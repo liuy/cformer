@@ -46,6 +46,21 @@ static inline void update_grad(tensor *t, const array &grad)
     t->grad = t->is_leaf() ? t->grad + grad : grad;
 }
 
+static inline void update_grad(tensor *t, const array &grad, int dim, int begin, int end)
+{
+    if (t->is_leaf() && !t->need_grad)
+        return;
+    // t->grad will be sliced in the backward, so we need to make sure it's not empty.
+    if (!t->is_leaf())
+        t->grad = zeros_like(t->data);
+    if (dim == 0) {
+        t->grad.rows(begin, end) = t->is_leaf() ? t->grad.rows(begin, end) + grad : grad;
+    } else if (dim == 1) {
+        t->grad.cols(begin, end) = t->is_leaf() ? t->grad.cols(begin, end) + grad : grad;
+    } else
+        panic("dimination must be 0 or 1");
+}
+
 static array fwd_add(tensor *a, tensor *b, tensor *p)
 {
     return a->data + b->data;
@@ -382,6 +397,26 @@ static void bwd_pow(tensor *a, tensor *dummy, tensor *p)
     update_grad(a, p->grad * p->param.p * af::pow(a->data, p->param.p - 1));
 }
 
+static array fwd_slice(tensor *a, tensor *dummy, tensor *p)
+{
+    if (p->param.dim == 0)
+        return a->data.rows(p->param.int1, p->param.int2);
+    else if (p->param.dim == 1)
+        return a->data.cols(p->param.int1, p->param.int2);
+    else
+        panic("slice only support dim 0 or 1");
+}
+
+static void bwd_slice(tensor *a, tensor *dummy, tensor *p)
+{
+    if (p->param.dim == 0)
+        update_grad(a, p->grad, p->param.dim, p->param.int1, p->param.int2);
+    else if (p->param.dim == 1)
+        update_grad(a, p->grad, p->param.dim, p->param.int1, p->param.int2);
+    else
+        panic("slice only support dim 0 or 1");
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -409,10 +444,11 @@ OPERATOR(addf);
 OPERATOR(subf);
 OPERATOR(mulf);
 OPERATOR(divf);
+OPERATOR(slice);
 
 #define VA_LIST(...) __VA_ARGS__
 #define METHOD(name, args, new_arg, op, stmts...) tensor& tensor::name(VA_LIST args) \
-    { tensor *r = new tensor(this, new_arg, &oper_##op); stmts; return *r;}
+    { tensor *r = new tensor(this, new_arg, &oper_##op); stmts; return *r; }
 METHOD(matmul, (tensor &t), &t, matmul)
 METHOD(operator+, (tensor &t), &t, add)
 METHOD(operator-, (tensor &t), &t, sub)
@@ -443,6 +479,8 @@ METHOD(bstd, (int dim), nullptr, bstd, r->param.dim = dim)
 METHOD(submean, (int dim), nullptr, submean, r->param.dim = dim)
 METHOD(batchnorm, (int dim), nullptr, batchnorm, r->param.dim = dim)
 METHOD(pow, (float p), nullptr, pow, r->param.p = p)
+METHOD(slice, (int dim, int begin, int end), nullptr, slice, \
+       r->param.dim = dim; r->param.int1 = begin; r->param.int2 = end)
 
 static inline tensor& detach_tensor(tensor &t)
 {

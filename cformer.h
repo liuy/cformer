@@ -27,6 +27,8 @@ struct oper {
 
 struct param {
     int dim;           // parameter of lhs
+    int int1;          // first int parameter
+    int int2;          // second int parameter
     float p;           // parameter of pow oper
 };
 
@@ -107,6 +109,9 @@ struct tensor {
     tensor& bstd(int);
     tensor& batchnorm(int);
     tensor& pow(float);
+    /// @brief Slice the tensor along the dimension dim. For e.g, dim=1, T[span, begin:end]
+    /// @return the slice of tensor
+    tensor& slice(int dim, int begin, int end);
     /**
      * detach tensor to a temporary tensor.
      *
