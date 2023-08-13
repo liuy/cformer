@@ -442,7 +442,7 @@ METHOD(submean, int dim, nullptr, submean, this->param.dim = dim)
 METHOD(batchnorm, int dim, nullptr, batchnorm, this->param.dim = dim)
 METHOD(pow, float p, nullptr, pow, this->param.p = p)
 
-static inline tensor& move_tensor(tensor &t)
+static inline tensor& detach_tensor(tensor &t)
 {
 /* FIXME: this is a hack to copy tensor blindly. can we do better? */
     tensor *r = new tensor();
@@ -459,16 +459,16 @@ static inline tensor& move_tensor(tensor &t)
     return *r;
 }
 
-tensor& tensor::move(void)
+tensor& tensor::detach(void)
 {
-    return move_tensor(*this);
+    return detach_tensor(*this);
 }
 
 // y += c will create a new tensor y' takes the value of y, then y = y' + c
 void tensor::operator+= (tensor &t)
 {
     // Note = is a copy_delete operation. can we swap it to avoid extra copy?
-    *this = this->move() + t;
+    *this = this->detach() + t;
 }
 
 void tensor::forward(void)

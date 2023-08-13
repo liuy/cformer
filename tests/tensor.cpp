@@ -410,12 +410,12 @@ TEST(Tensor, pow)
     y.destroy_graph();
 }
 
-TEST(Tensor, move)
+TEST(Tensor, detach)
 {
     tensor x(af::constant(3, 1, 3), true);
     tensor &y = x.pow(2);
 
-    y = y.move() + 1;
+    y = y.detach() + 1;
     y.backward();
     array_eq(y.data, {10.0f, 10.0f, 10.0f});
     array_eq(x.grad, {6.0f, 6.0f, 6.0f});
@@ -423,7 +423,7 @@ TEST(Tensor, move)
 
     x.zero_grad();
     tensor z = x * 2;
-    z = z.move() + 1;
+    z = z.detach() + 1;
     z.backward();
     z.destroy_graph();
     array_eq(z.data, {7.0f, 7.0f, 7.0f});
