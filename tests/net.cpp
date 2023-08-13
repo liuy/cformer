@@ -32,3 +32,4 @@ TEST(Net, Linear_BatchNorm1d_Dropout)
     printf("Train accuracy: %.4f\n", categorical_accuracy(set.train_y, y_pred));
     ASSERT_GT(categorical_accuracy(set.train_y, y_pred), 0.9);
 }
+

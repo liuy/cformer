@@ -265,6 +265,14 @@ struct Dropout : layer {
     tensor& forward(tensor &x, bool training = false) override;
 };
 
+struct lstm_cell {
+    bool no_bias;
+    tensor weight_ih = tensor(array(), true), weight_hh = tensor(array(), true);
+    tensor bias_ih = tensor(array(), true), bias_hh = tensor(array(), true);
+    lstm_cell(int in, int out, bool nb = false, const af::dtype t = f32);
+    tensor& forward(tensor &x, tensor &h, tensor &c);
+};
+
 struct optimizer {
     virtual void step(void) = 0;
 };

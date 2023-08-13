@@ -23,6 +23,60 @@ tensor& Linear::forward(tensor &x, bool training)
     }
 }
 
+// rand uniform value in [-sqrt(1/out), sqrt(1/out)] as suggested by PyTorch
+static array lstm_uniform(int in, int out, const af::dtype t)
+{
+    float r = 1.0 / sqrt(out);
+    return af::randu(in, out, t) * 2 * r - r;
+}
+
+lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t) : no_bias(nb)
+{
+    weight_ih.init(lstm_uniform(in, out * 4, t));
+    weight_hh.init(lstm_uniform(out, out * 4, t));
+    if (!no_bias) {
+        bias_ih.init(lstm_uniform(1, out * 4, t));
+        bias_hh.init(lstm_uniform(1, out * 4, t));
+    }
+}
+
+/**
+ * Long Short-Term Memory (LSTM) is a type of recurrent neural network (RNN) architecture that
+ * is used to learn long-term dependencies. It is implemented by adding a memory cell and three
+ * gates to a vanilla RNN. The memory cell is used to store the long-term memory. The three gates
+ * are used to control the flow of information into and out of the memory cell. The three gates
+ * are input gate, forget gate and output gate.
+ * intput gate: controls the flow of information from the input to the memory cell.
+ * forget gate: controls the flow of information from the memory cell to itself.
+ * output gate: controls the flow of information from the memory cell to the output.
+ *
+ * LSTM cell has two states: hidden state and cell state.
+ * cell_state: the memory cell of the previous LSTM cell, updated as follows:
+ *   cell_state = cell_state * forget_gate + input_gate * g
+ * hidden_state: the output of the previous LSTM cell, updated as:
+ *   hidden_state = tanh(cell_state) * output_gate
+ * see more details at https://www.bioinf.jku.at/publications/older/2604.pdf
+ */
+tensor& lstm_cell::forward(tensor &x, tensor &hidden_state, tensor &cell_state)
+{
+    tensor &gates = x.matmul(weight_ih) + hidden_state.matmul(weight_hh);
+    if (!no_bias)
+        gates += bias_ih.expandas(x) + bias_hh.expandas(x);
+
+    int size = weight_ih.data.dims(1) / 4;
+    tensor &input = gates.slice(1, 0, size - 1).sigmoid();
+    tensor &forget = gates.slice(1, size, size*2 -1).sigmoid();
+    tensor &g = gates.slice(1, 2*size, 3*size - 1).tanh();
+    tensor &output = gates.slice(1, 3*size, 4*size - 1).sigmoid();
+
+    tensor &new_cell_state = cell_state * forget + input * g;
+    tensor &new_hidden_state = new_cell_state.tanh() * output;
+    new_hidden_state.forward();
+    hidden_state.data = new_hidden_state.data;
+    cell_state.data = new_cell_state.data;
+    return new_hidden_state;
+}
+
 /**
  * Batch Normalization (BN) is a technique to improve the training speed and performance
  * of a neural network. It is a essentially a normalization of the output of a previous
