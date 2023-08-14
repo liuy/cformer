@@ -152,3 +152,66 @@ void data::get_mini_batch(tensor &x, tensor &y, size_t idx, size_t batch_size)
     x.init(train_x.data.rows(start, end - 1));
     y.init(train_y.data.rows(start, end - 1));
 }
+
+tokenizer::tokenizer(const std::string& filename)
+{
+    std::string file = read_file(filename);
+    uint32_t idx = 0;
+    std::vector<std::string> tokens = split(file);
+    for (auto& token : tokens) {
+        if (token2idx.find(token) == token2idx.end()) {
+            token2idx[token] = idx;
+            idx2token[idx] = token;
+            //std::cout << idx << " " << token << std::endl;
+            vocab.push_back(token);
+            idx++;
+        }
+    }
+}
+
+std::vector<uint32_t> tokenizer::encode(const std::string& s)
+{
+    std::vector<uint32_t> result;
+    std::vector<std::string> tokens = split(s);
+    for (auto &token: tokens) {
+        auto iter = token2idx.find(token);
+        if (unlikely(iter != token2idx.end()))
+            result.push_back(iter->second);
+    }
+    return result;
+}
+
+std::string tokenizer::decode(const std::vector<uint32_t>& v)
+{
+    std::string result;
+    for (const auto &idx : v) {
+        auto iter = idx2token.find(idx);
+        if (unlikely(iter != idx2token.end()))
+            result += iter->second;
+    }
+    return result;
+}
+
+std::vector<std::string> tokenizer::split(const std::string &s)
+{
+    std::vector<std::string> tokens;
+    std::string token;
+    for (const auto &c : s) {
+        if (std::isspace(c) || std::ispunct(c) || std::iscntrl(c)) {
+            // add a word
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
+            }
+            // add a non-character token
+            tokens.push_back(std::string(1, c));
+        } else {
+            token += c;
+        }
+    }
+    // add the last word if any
+    if (!token.empty()) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}

@@ -56,6 +56,8 @@ lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t) : no_bias(nb)
  * hidden_state: the output of the previous LSTM cell, updated as:
  *   hidden_state = tanh(cell_state) * output_gate
  * see more details at https://www.bioinf.jku.at/publications/older/2604.pdf
+ *
+ * Note: {i,f,g,o} are just implemented as slices of one gates tensor.
  */
 tensor& lstm_cell::forward(tensor &x, tensor &hidden_state, tensor &cell_state)
 {

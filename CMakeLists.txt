@@ -25,7 +25,9 @@ option(CF_TEST "Enable tests" off)
 if(CF_TEST)
     enable_testing()
     find_package(GTest)
-    add_executable(test_cformer tensor.cpp net.cpp data.cpp backtrace.cpp tests/tensor.cpp tests/net.cpp)
+    add_executable(test_cformer tensor.cpp net.cpp data.cpp backtrace.cpp
+        tests/tensor.cpp tests/net.cpp tests/data.cpp
+    )
     target_link_libraries(test_cformer ArrayFire::afcpu GTest::gtest_main -ldw)
     gtest_discover_tests(test_cformer)
     #gtest_discover_tests(test_cformer WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

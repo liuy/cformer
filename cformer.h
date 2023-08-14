@@ -199,6 +199,19 @@ struct elastic_transform : transform {
     array operator()(const array &a, struct data &d) override;
 };
 
+struct tokenizer {
+    std::unordered_map<std::string, uint32_t> token2idx;
+    std::unordered_map<uint32_t, std::string> idx2token;
+    std::vector<std::string> vocab;
+    tokenizer(const std::string &filename);
+    // encode a text to a vector of word indices
+    std::vector<uint32_t> encode(const std::string &s);
+    // decode a vector of word indices to a text
+    std::string decode(const std::vector<uint32_t> &v);
+    // split a text into a sequence of words, punctuation, whitespace, control characters, etc.
+    std::vector<std::string> split(const std::string &s);
+};
+
 struct data {
     std::vector<size_t> train_idx;
     tensor train_x, train_y, test_x, test_y;
@@ -339,7 +352,42 @@ struct seqnet {
     void summary(void);
 };
 
+#ifdef CF_DEBUG
+template <typename... Args>
+static inline void _af_debug(Args... args)
+{
+    for (auto arg : {args...})
+        af_print(arg);
+}
+#define af_debug(...) do { \
+    fprintf(stdout, "%s:%d:%s():\n", __FILE__, __LINE__, __func__); \
+    _af_debug(__VA_ARGS__); \
+    } while (0)
+#define cf_debug(fmt, ...) do { \
+    fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+    } while (0)
+#else
+    #define af_debug(...) do {} while (0)
+    #define cf_debug(...) do {} while (0)
+#endif
+
+#define panic(fmt, ...) do { \
+    fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+    exit(EXIT_FAILURE); \
+    } while (0)
+
 // ********************** helper functions **********************
+static inline std::string read_file(const std::string& file_path)
+{
+    std::ifstream file(file_path);
+    if (!file.is_open())
+        panic("Cannot open file: %s", file_path.c_str());
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
 static inline int32_t read_i32(std::ifstream &file)
 {
     int32_t value;
@@ -385,30 +433,6 @@ static inline array onehot(const array &a, int num_classes = 10)
 #define bswap_16(x) __builtin_bswap16(x)
 #define bswap_32(x) __builtin_bswap32(x)
 #define bswap_64(x) __builtin_bswap64(x)
-
-#ifdef CF_DEBUG
-template <typename... Args>
-static inline void _af_debug(Args... args)
-{
-    for (auto arg : {args...})
-        af_print(arg);
-}
-#define af_debug(...) do { \
-    fprintf(stdout, "%s:%d:%s():\n", __FILE__, __LINE__, __func__); \
-    _af_debug(__VA_ARGS__); \
-    } while (0)
-#define cf_debug(fmt, ...) do { \
-    fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-    } while (0)
-#else
-    #define af_debug(...) do {} while (0)
-    #define cf_debug(...) do {} while (0)
-#endif
-
-#define panic(fmt, ...) do { \
-    fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-    exit(EXIT_FAILURE); \
-    } while (0)
 
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
