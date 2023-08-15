@@ -23,6 +23,21 @@ tensor& Linear::forward(tensor &x, bool training)
     }
 }
 
+/**
+ * Maps token indices to one-hot vectors, then projects to embedding vectors
+ *
+ * Input: x of shape (seq_len, batch_size)
+ * Output: shape (seq_len, batch_size, out)
+ */
+tensor& Embedding::forward(tensor& x, bool training)
+{
+    x.forward();
+    af::dim4 dims = x.data.dims();
+    dims[x.data.numdims()] = weight.data.dims(1); // (seq_len, batch_size, out)
+    x.init(onehot(x.data, weight.data.dims(0))); // (seq_len * batch_size, in)
+    return x.matmul(weight).reshape(dims);
+}
+
 // rand uniform value in [-sqrt(1/out), sqrt(1/out)] as suggested by PyTorch
 static array lstm_uniform(int in, int out, const af::dtype t)
 {

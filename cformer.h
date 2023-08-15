@@ -156,13 +156,13 @@ static inline array xavier_uniform(int in, int out, const af::dtype t = f32)
     return af::randu(in, out, t) * 2 * limit - limit;
 }
 
-// kaiming_normal is randn value with mean 0 and std sqrt(2.0 / in) and mostly for ReLU
+// kaiming_normal is randn value with mean 0 and std sqrt(2.0 / in)
 static inline array kaiming_normal(int in, int out, const af::dtype ty = f32)
 {
    return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / in);
 }
 
-// xavier_normal is randn value with mean 0 and std sqrt(2.0 / (in + out)) and mostly for tanh and sigmoid
+// xavier_normal is randn value with mean 0 and std sqrt(2.0 / (in + out))
 static inline array xavier_normal(int in, int out, const af::dtype ty = f32)
 {
     return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / (in + out));
@@ -303,6 +303,15 @@ struct Dropout : layer {
     tensor& forward(tensor &x, bool training = false) override;
     std::vector<tensor *> parameters(void) override { return {}; }
     layer_stat stat(void) override { return {0, 0, 0}; }
+};
+
+struct Embedding : layer {
+    tensor weight = tensor(array(), true);
+    Embedding(int in, int out, const af::dtype t = f32)
+    {name = "Embedding"; weight.init(xavier_normal(in, out, t));}
+    tensor& forward(tensor &x, bool training = false) override;
+    std::vector<tensor *> parameters(void) override { return {&weight}; }
+    layer_stat stat(void) override { return {weight.data.dims(0), weight.data.dims(1), weight.data.elements()}; }
 };
 
 struct lstm_cell {
