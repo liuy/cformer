@@ -232,19 +232,27 @@ typedef array (*initializer_t)(int, int, const af::dtype);
 static const char *activ_name[] = {"None", "ReLU", "Sigmoid", "Tanh", "Softmax", "LogSoftmax"};
 enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax, LogSoftmax};
 
+struct layer_stat {
+    dim_t in;
+    dim_t out;
+    dim_t num_params;
+};
+
 struct layer {
     const char *name;
     bool no_bias = false;
-    tensor weight = tensor(array(), true);
-    tensor bias = tensor(array(), true);
     activ_t act = None;
     virtual ~layer() = default;
     virtual tensor& forward(tensor &x, bool = false) = 0;
+    virtual std::vector<tensor *> parameters(void) = 0;
+    virtual layer_stat stat(void) = 0;
     inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
 };
 
 struct Linear : layer {
     initializer_t init;
+    tensor weight = tensor(array(), true);
+    tensor bias = tensor(array(), true);
     Linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
         : init(a == ReLU ? kaiming_uniform : xavier_uniform)
     /** Notes on bias initialization:
@@ -258,6 +266,11 @@ struct Linear : layer {
     {name = "Linear"; act = a; no_bias = nb; weight.init(init(in, out, t));
     if (!no_bias) bias.init(af::transpose(init(out, 1, t)));}
     tensor& forward(tensor &x, bool training = false) override;
+    std::vector<tensor *> parameters(void) override
+    { if (no_bias) return {&weight}; else return {&weight, &bias}; }
+    layer_stat stat(void) override
+    { return {weight.data.dims(0), weight.data.dims(1),
+      no_bias ? weight.data.elements() : weight.data.elements() + bias.data.elements()}; }
 };
 
 struct BatchNorm1d : layer {
@@ -265,17 +278,24 @@ struct BatchNorm1d : layer {
     float epsilon;
     tensor moving_mean;
     tensor moving_vari;
+    tensor weight = tensor(array(), true);
+    tensor bias = tensor(array(), true);
     BatchNorm1d(int dim, float m = 0.9, float e = 1e-5, const af::dtype t = f32)
         : momentum(m), epsilon(e)
         {name = "BN1d"; weight.init(ones(1, dim, t)); bias.init(zeros(1, dim, t));
          moving_mean.init(zeros(1, dim, t)); moving_vari.init(ones(1, dim, t));}
     tensor& forward(tensor &x, bool training = false) override;
+    std::vector<tensor *> parameters(void) override { return {&weight, &bias}; }
+    layer_stat stat(void) override
+    { return {weight.data.dims(1), weight.data.dims(1), weight.data.elements() + bias.data.elements()}; }
 };
 
 struct Dropout : layer {
     float p;
     Dropout(float prob = 0.2) : p(prob) {name = "Dropout";}
     tensor& forward(tensor &x, bool training = false) override;
+    std::vector<tensor *> parameters(void) override { return {}; }
+    layer_stat stat(void) override { return {0, 0, 0}; }
 };
 
 struct lstm_cell {
@@ -343,8 +363,7 @@ struct seqnet {
     seqnet(std::initializer_list<layer*> list) { for (auto i : list) add(i); }
     ~seqnet() { for (auto i : layers) delete i; }
     inline void add(layer *l)
-    {layers.push_back(l); if (!l->weight.data.isempty()) params.push_back(&l->weight);
-     if (!l->no_bias && !l->bias.data.isempty()) params.push_back(&l->bias);}
+    {layers.push_back(l); for (auto p : l->parameters()) params.push_back(p);}
     void train(data &set, trainer &tr);
     tensor& forward(tensor &x, bool training = false);
     inline tensor operator()(tensor &x) {

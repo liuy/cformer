@@ -253,18 +253,11 @@ void seqnet::summary(void)
     printf("+-------+---------+-------+--------+------+------------+------------+\n");
     printf("| Layer | Name    | Input | Output | Bias | Activation | Parameters |\n");
     printf("+-------+---------+-------+--------+------+------------+------------+\n");
-    auto param_num = [](layer *l) {
-            if (l->no_bias)
-                return l->weight.data.elements();
-            return l->weight.data.elements() + l->bias.data.elements();
-        };
     for (auto layer : layers) {
-        size_t np = param_num(layer);
-        total_params += np;
-        printf("| %-5d | %-7s | %-5lld | %-6lld | %-4s | %-10s | %-'10ld |\n", i++, layer->name,
-            layer->weight.data.isempty() ? 0 : layer->weight.data.dims(0),
-            layer->weight.data.isempty() ? 0 : layer->weight.data.dims(1), layer->no_bias ? "None" : "Yes",
-            activ_name[layer->act], np);
+        layer_stat st = layer->stat();
+        total_params += st.num_params;
+        printf("| %-5d | %-7s | %-5lld | %-6lld | %-4s | %-10s | %-'10lld |\n", i++, layer->name,
+            st.in, st.out, layer->no_bias ? "None" : "Yes", activ_name[layer->act], st.num_params);
     }
     printf("+-------+---------+-------+--------+------+------------+------------+\n");
     printf("Total params: %ld\n", total_params);
