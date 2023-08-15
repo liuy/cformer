@@ -292,7 +292,7 @@ struct BatchNorm1d : layer {
 
 struct Dropout : layer {
     float p;
-    Dropout(float prob = 0.2) : p(prob) {name = "Dropout";}
+    Dropout(float prob = 0.2) : p(prob) {name = "Dropout"; no_bias = true;}
     tensor& forward(tensor &x, bool training = false) override;
     std::vector<tensor *> parameters(void) override { return {}; }
     layer_stat stat(void) override { return {0, 0, 0}; }
