@@ -279,7 +279,7 @@ static void bwd_expandas(tensor *a, tensor *b, tensor *p)
     update_grad(a, af::sum(p->grad, 0));
 }
 
-// Suppport dim=1 right now, TODO: need refine onehot to support more dims
+// Suppport dim=1 right now.
 static array fwd_bmax(tensor *a, tensor *dummy, tensor *p)
 {
     assert(p->param.dim == 1);

@@ -448,11 +448,23 @@ static inline array argmax(const array &a, int dim = 1)
     return max_idxs;
 }
 
+/**
+ * a[n] -> a[n, num_classes], where a[n, i] = 1 if a[n] == i else 0.
+ * a[n, m] -> a[n, m, num_classes], where a[n, m, i] = 1 if a[n, m] == i else 0. for e.g
+ * a[2, 3]:
+ *  [[1, 2, 0]
+ *   [2, 1, 1]]
+ *
+ * a[2, 3, 3] = onehot(a[2, 3], 3):
+ * [[[0, 1, 0], [0, 0, 1], [1, 0, 0]]
+ *  [[0, 0, 1], [0, 1, 0], [0, 1, 0]]]
+ */
 static inline array onehot(const array &a, int num_classes = 10)
 {
-    assert(a.numdims() == 1);
+    af::dim4 dims = a.dims();
+    dims[a.dims().ndims()] = num_classes;
     array iden = af::identity(num_classes, num_classes, a.type());
-    return af::lookup(iden, a);
+    return af::moddims(iden(a, af::span), dims);
 }
 
 // endian conversion helpers

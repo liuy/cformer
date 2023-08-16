@@ -479,3 +479,16 @@ TEST(Tensor, transpose)
     array_eq(x.grad, {0.0f, 2.0f, 4.0f, 6.0f, 8.0f, 10.0f});
     y.destroy_graph();
 }
+
+TEST(Tensor, onehot)
+{
+    array x({2}, {1.0f, 2.0f});
+    array y = onehot(x, 3);
+    ASSERT_EQ(y.numdims(), 2);
+    array_eq(y, {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f});
+    x = array({1,2}, {2.0f, 1.0f});
+    y = onehot(x, 3);
+    ASSERT_EQ(y.numdims(), 3);
+    af_print(y);
+    array_eq(y, {0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f});
+}
