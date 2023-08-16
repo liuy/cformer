@@ -417,6 +417,16 @@ static void bwd_slice(tensor *a, tensor *dummy, tensor *p)
         panic("slice only support dim 0 or 1");
 }
 
+static array fwd_reshape(tensor *a, tensor *dummy, tensor *p)
+{
+    return af::moddims(a->data, p->param.dim4);
+}
+
+static void bwd_reshape(tensor *a, tensor *dummy, tensor *p)
+{
+    update_grad(a, af::moddims(p->grad, a->data.dims()));
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -445,6 +455,7 @@ OPERATOR(subf);
 OPERATOR(mulf);
 OPERATOR(divf);
 OPERATOR(slice);
+OPERATOR(reshape);
 
 #define VA_LIST(...) __VA_ARGS__
 #define METHOD(name, args, new_arg, op, stmts...) tensor& tensor::name(VA_LIST args) \
@@ -481,6 +492,7 @@ METHOD(batchnorm, (int dim), nullptr, batchnorm, r->param.dim = dim)
 METHOD(pow, (float p), nullptr, pow, r->param.p = p)
 METHOD(slice, (int dim, int begin, int end), nullptr, slice, \
        r->param.dim = dim; r->param.int1 = begin; r->param.int2 = end)
+METHOD(reshape, (const af::dim4 &dims), nullptr, reshape, r->param.dim4 = dims)
 
 static inline tensor& detach_tensor(tensor &t)
 {

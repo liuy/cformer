@@ -459,3 +459,13 @@ TEST(Tensor, slice)
     array_eq(x.grad, {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 14.0f, 16.0f, 18.0f, 20.0f, 22.0f, 24.0f});
     y.destroy_graph();
 }
+
+TEST(Tensor, reshape)
+{
+    tensor x(af::iota({2,3}), true);
+    tensor &y = (x * 2).reshape({6});
+    y.backward();
+    array_eq(y.data, {0.0f, 2.0f, 4.0f, 6.0f, 8.0f, 10.0f});
+    array_eq(x.grad, {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f});
+    y.destroy_graph();
+}

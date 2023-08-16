@@ -30,6 +30,7 @@ struct param {
     int int1;          // first int parameter
     int int2;          // second int parameter
     float p;           // parameter of pow oper
+    af::dim4 dim4;     // parameter of reshape oper
 };
 
 struct tensor {
@@ -119,6 +120,7 @@ struct tensor {
      * y = y.detach() + x; solve the problem.
      */
     tensor& detach(void);
+    tensor& reshape(const af::dim4 &d);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
