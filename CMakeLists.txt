@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.20.0)
 project(cformer VERSION 0.1 LANGUAGES CXX)
 
 set(FILES
-    main.cpp
     cformer.h
     tensor.cpp
     net.cpp
@@ -18,8 +17,15 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native -std=c++11 -g")
 
 find_package(ArrayFire)
-add_executable(cformer ${FILES})
-target_link_libraries(cformer ArrayFire::af -ldw)
+
+option(CF_MNIST "Enable MNIST" off)
+if(CF_MNIST)
+    add_executable(cformer_mnist ${FILES} examples/mnist.cpp)
+    target_link_libraries(cformer_mnist ArrayFire::af -ldw)
+else()
+    add_executable(cformer ${FILES} main.cpp)
+    target_link_libraries(cformer ArrayFire::af -ldw)
+endif()
 
 option(CF_TEST "Enable tests" off)
 if(CF_TEST)
