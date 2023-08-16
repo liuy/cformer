@@ -483,11 +483,11 @@ TEST(Tensor, transpose)
 TEST(Tensor, onehot)
 {
     array x({2}, {1.0f, 2.0f});
-    array y = onehot(x, 3);
+    array y = onehot(x, 3, true);
     ASSERT_EQ(y.numdims(), 2);
     array_eq(y, {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f});
     x = array({1,2}, {2.0f, 1.0f});
-    y = onehot(x, 3);
+    y = onehot(x, 3, true);
     ASSERT_EQ(y.numdims(), 3);
     af_print(y);
     array_eq(y, {0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f});

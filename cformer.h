@@ -458,13 +458,20 @@ static inline array argmax(const array &a, int dim = 1)
  * a[2, 3, 3] = onehot(a[2, 3], 3):
  * [[[0, 1, 0], [0, 0, 1], [1, 0, 0]]
  *  [[0, 0, 1], [0, 1, 0], [0, 1, 0]]]
+ *
+ * if keep_dims is false, then
+ * a[n, m] -> a[n * m, num_classes]
  */
-static inline array onehot(const array &a, int num_classes = 10)
+static inline array onehot(const array &a, int num_classes = 10, bool keep_dims = false)
 {
-    af::dim4 dims = a.dims();
-    dims[a.dims().ndims()] = num_classes;
     array iden = af::identity(num_classes, num_classes, a.type());
-    return af::moddims(iden(a, af::span), dims);
+
+    if (keep_dims) {
+        af::dim4 dims = a.dims();
+        dims[a.dims().ndims()] = num_classes;
+        return af::moddims(iden(a, af::span), dims);
+    }
+    return iden(a, af::span);
 }
 
 // endian conversion helpers
