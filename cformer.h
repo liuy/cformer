@@ -121,6 +121,11 @@ struct tensor {
      */
     tensor& detach(void);
     tensor& reshape(const af::dim4 &d);
+    /**
+     * For an array a with two dimensions, T() gives the matrix transpose.
+     * For an array with more than two dimensions, the first two dimensions are transposed.
+     */
+    tensor& T(void);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);

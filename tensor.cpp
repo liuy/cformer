@@ -427,6 +427,16 @@ static void bwd_reshape(tensor *a, tensor *dummy, tensor *p)
     update_grad(a, af::moddims(p->grad, a->data.dims()));
 }
 
+static array fwd_transpose(tensor *a, tensor *dummy, tensor *p)
+{
+    return af::transpose(a->data);
+}
+
+static void bwd_transpose(tensor *a, tensor *dummy, tensor *p)
+{
+    update_grad(a, af::transpose(p->grad));
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -456,6 +466,7 @@ OPERATOR(mulf);
 OPERATOR(divf);
 OPERATOR(slice);
 OPERATOR(reshape);
+OPERATOR(transpose);
 
 #define VA_LIST(...) __VA_ARGS__
 #define METHOD(name, args, new_arg, op, stmts...) tensor& tensor::name(VA_LIST args) \
@@ -493,6 +504,7 @@ METHOD(pow, (float p), nullptr, pow, r->param.p = p)
 METHOD(slice, (int dim, int begin, int end), nullptr, slice, \
        r->param.dim = dim; r->param.int1 = begin; r->param.int2 = end)
 METHOD(reshape, (const af::dim4 &dims), nullptr, reshape, r->param.dim4 = dims)
+METHOD(T, (void), nullptr, transpose)
 
 static inline tensor& detach_tensor(tensor &t)
 {
