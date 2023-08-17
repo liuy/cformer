@@ -210,7 +210,8 @@ struct tokenizer {
     std::unordered_map<std::string, uint32_t> token2idx;
     std::unordered_map<uint32_t, std::string> idx2token;
     std::vector<std::string> vocab;
-    tokenizer(const std::string &filename);
+    tokenizer() = default;
+    tokenizer(const std::string &file);
     // encode a text to a vector of word indices
     std::vector<uint32_t> encode(const std::string &s);
     // decode a vector of word indices to a text
@@ -225,6 +226,7 @@ struct data {
     size_t nrow, ncol; // for images
     bool shuffle;
     data_reader_t data_reader;
+    struct tokenizer tokenizer;
     data(data_reader_t dr, bool shf = true) : data_reader(dr), shuffle(shf) {}
     inline size_t num_examples(void) { return train_x.data.dims(0); }
     void load(std::initializer_list<transform*> list = {});
@@ -232,6 +234,7 @@ struct data {
     void get_mini_batch(tensor &x, tensor &y, size_t idx, size_t batch_size);
     inline void shuffle_train_idx(void) {
         std::shuffle(train_idx.begin(), train_idx.end(), std::default_random_engine());}
+    void reshape(size_t batch_size);
 };
 
 typedef array (*initializer_t)(int, int, const af::dtype);
@@ -367,6 +370,7 @@ typedef float (*metrics_fn_t)(tensor &y_true, tensor &y_pred);
 struct trainer {
     size_t epochs;
     size_t batch_size;
+    size_t seq_len;
     struct optimizer &optimizer;
     loss_fn_t loss_fn;
     metrics_fn_t metrics_fn;

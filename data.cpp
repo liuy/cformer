@@ -153,6 +153,18 @@ void data::get_mini_batch(tensor &x, tensor &y, size_t idx, size_t batch_size)
     y.init(train_y.data.rows(start, end - 1));
 }
 
+// return shape of (n, batch_size) n = elements / batch_size and strip off remainder
+void data::reshape(size_t batch_size)
+{
+    assert(train_x.data.numdims() == 1 && train_y.data.numdims() == 1);
+    size_t n = train_x.data.elements() / batch_size;
+    train_x.init(af::moddims(train_x.data(af::seq(0, n * batch_size - 1)), n, batch_size));
+    train_y.init(af::moddims(train_y.data(af::seq(0, n * batch_size - 1)), n, batch_size));
+    printf("train_x shape: %lld %lld\n", train_x.data.dims(0), train_x.data.dims(1));
+    printf("train_y shape: %lld %lld\n", train_y.data.dims(0), train_y.data.dims(1));
+}
+
+
 tokenizer::tokenizer(const std::string& file)
 {
     std::vector<std::string> tokens = split(file);

@@ -238,13 +238,15 @@ void Adam::step(void)
 void seqnet::train(data &set, trainer &tr)
 {
     size_t n = set.num_examples();
+    if (tr.seq_len) // time series data need to be reshaped as (*, batch_size)
+        set.reshape(tr.batch_size);
     set.init_train_idx(tr.batch_size);
     printf("| Epoch | Time Used | Train Loss | Train Accu |\n");
     for (size_t i = 0; i < tr.epochs; i++) {
         af::timer::start();
         for (std::vector<size_t>::iterator it = set.train_idx.begin(); it != set.train_idx.end(); it++) {
             tensor x_batch, y_true;
-            set.get_mini_batch(x_batch, y_true, *it, tr.batch_size);
+            set.get_mini_batch(x_batch, y_true, *it, tr.seq_len ? tr.seq_len : tr.batch_size);
             tensor &y_pred = forward(x_batch, true);
             tensor &loss = tr.loss_fn(y_true, y_pred);
 
