@@ -415,6 +415,13 @@ static inline void _af_debug(Args... args)
     exit(EXIT_FAILURE); \
     } while (0)
 
+#define array_shape(a) do { \
+    printf("%s shape: [", #a); \
+    for (int i = 0; i < a.numdims(); i++) \
+        printf("%lld,", a.dims(i)); \
+    printf("]\n"); \
+    } while (0)
+
 // ********************** helper functions **********************
 static inline std::string read_file(const std::string& file_path)
 {
