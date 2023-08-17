@@ -153,11 +153,10 @@ void data::get_mini_batch(tensor &x, tensor &y, size_t idx, size_t batch_size)
     y.init(train_y.data.rows(start, end - 1));
 }
 
-tokenizer::tokenizer(const std::string& filename)
+tokenizer::tokenizer(const std::string& file)
 {
-    std::string file = read_file(filename);
-    uint32_t idx = 0;
     std::vector<std::string> tokens = split(file);
+    uint32_t idx = 0;
     for (auto& token : tokens) {
         if (token2idx.find(token) == token2idx.end()) {
             token2idx[token] = idx;
