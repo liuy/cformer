@@ -308,7 +308,7 @@ struct Dropout : layer {
 struct Embedding : layer {
     tensor weight = tensor(array(), true);
     Embedding(int in, int out, const af::dtype t = f32)
-    {name = "Embedding"; weight.init(xavier_normal(in, out, t));}
+    {name = "Embed"; no_bias = true; weight.init(xavier_normal(in, out, t));}
     tensor& forward(tensor &x, bool training = false) override;
     std::vector<tensor *> parameters(void) override { return {&weight}; }
     layer_stat stat(void) override { return {weight.data.dims(0), weight.data.dims(1), weight.data.elements()}; }
