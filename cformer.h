@@ -211,7 +211,6 @@ struct tokenizer {
     std::unordered_map<uint32_t, std::string> idx2token;
     std::vector<std::string> vocab;
     tokenizer() = default;
-    tokenizer(const std::string &file);
     // encode a text to a vector of word indices
     std::vector<uint32_t> encode(const std::string &s);
     // decode a vector of word indices to a text

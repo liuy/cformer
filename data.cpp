@@ -164,10 +164,10 @@ void data::reshape(size_t batch_size)
     printf("train_y shape: %lld %lld\n", train_y.data.dims(0), train_y.data.dims(1));
 }
 
-
-tokenizer::tokenizer(const std::string& file)
+std::vector<uint32_t> tokenizer::encode(const std::string& s)
 {
-    std::vector<std::string> tokens = split(file);
+    std::vector<uint32_t> result;
+    std::vector<std::string> tokens = split(s);
     uint32_t idx = 0;
     for (auto& token : tokens) {
         if (token2idx.find(token) == token2idx.end()) {
@@ -175,19 +175,10 @@ tokenizer::tokenizer(const std::string& file)
             idx2token[idx] = token;
             //std::cout << idx << " " << token << std::endl;
             vocab.push_back(token);
+            result.push_back(idx);
             idx++;
-        }
-    }
-}
-
-std::vector<uint32_t> tokenizer::encode(const std::string& s)
-{
-    std::vector<uint32_t> result;
-    std::vector<std::string> tokens = split(s);
-    for (auto &token: tokens) {
-        auto iter = token2idx.find(token);
-        if (unlikely(iter != token2idx.end()))
-            result.push_back(iter->second);
+        } else
+            result.push_back(token2idx[token]);
     }
     return result;
 }

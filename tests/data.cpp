@@ -5,7 +5,7 @@ TEST(Data, tokenizer)
 {
     std::string s = "This is a test sentence, really.\nHello world!\n";
 
-    tokenizer t(s);
+    tokenizer t;
     std::vector<uint32_t> encoded = t.encode(s);
     for (int i = 0; i < encoded.size(); i++)
         std::cout << encoded[i] << "(" +  t.idx2token[encoded[i]] + ")" << " ";

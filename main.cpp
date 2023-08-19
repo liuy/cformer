@@ -3,7 +3,6 @@
 static void txt_reader(struct data &d)
 {
     std::string txt = read_file("data/shakespeare.txt");
-    d.tokenizer = tokenizer(txt);
     auto v = d.tokenizer.encode(txt);
     array a(v.size(), v.data());
     d.train_x.init(a(af::seq(0, a.elements() - 2)));
