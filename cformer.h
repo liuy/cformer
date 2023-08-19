@@ -53,7 +53,8 @@ struct tensor {
     tensor(const float f) : scalar(f) {} // for float leaf tensor
     tensor(const array &a, bool ng = false) : data(a), need_grad(ng)
         {if (need_grad) grad = af::constant(0, a.dims());} // for leaf tensor
-    tensor(const tensor &t) {copy_delete(t);} // Note: no_delete = true, for root tensor mostly. USE WITH CAUTION!
+    tensor(tensor &t) {copy_delete(t);} // Note: no_delete = true, for root tensor mostly. USE WITH CAUTION!
+    tensor(tensor &&t) = default; // for tensor t = tensor(a)
     tensor(tensor *a, tensor *b, oper *o) // for non-leaf tensor by operators
         : lhs(a), rhs(b), op(o), no_delete(false), need_grad(true), data_computed(false) {}
     tensor(tensor *a, const array &b, oper *o) // create non-leaf node from an array
