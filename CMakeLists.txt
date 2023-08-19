@@ -9,6 +9,8 @@ set(FILES
     backtrace.cpp
 )
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 option(CF_DEBUG "Enable debug" off)
 if(CF_DEBUG)
     add_compile_definitions(CF_DEBUG)

@@ -41,7 +41,7 @@ tensor& Embedding::forward(tensor& x, bool training)
 // rand uniform value in [-sqrt(1/out), sqrt(1/out)] as suggested by PyTorch
 static array lstm_uniform(int in, int out, const af::dtype t)
 {
-    float r = 1.0 / sqrt(out);
+    float r = 1.0 / std::sqrt(out);
     return af::randu(in, out, t) * 2 * r - r;
 }
 

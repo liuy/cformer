@@ -9,6 +9,7 @@
 #include <vector>
 #include <cassert>
 #include <bits/stdc++.h>
+#include <cmath>
 
 using af::array;
 
@@ -145,27 +146,27 @@ struct tensor {
 // kaiming_uniform is randu value [-limit, limit] and mostly for ReLU activation
 static inline array kaiming_uniform(int in, int out, const af::dtype t = f32)
 {
-    double limit = sqrt(6.0 / in);
+    double limit = std::sqrt(6.0 / in);
     return af::randu(in, out, t) * 2 * limit - limit;
 }
 
 // xavier_uniform is randu value [-limit, limit] and mostly for tanh and sigmoid
 static inline array xavier_uniform(int in, int out, const af::dtype t = f32)
 {
-    double limit = sqrt(6.0 / (in + out));
+    double limit = std::sqrt(6.0 / (in + out));
     return af::randu(in, out, t) * 2 * limit - limit;
 }
 
 // kaiming_normal is randn value with mean 0 and std sqrt(2.0 / in)
 static inline array kaiming_normal(int in, int out, const af::dtype ty = f32)
 {
-   return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / in);
+   return af::randn({in, out, 1, 1}, ty) * std::sqrt(2.0 / in);
 }
 
 // xavier_normal is randn value with mean 0 and std sqrt(2.0 / (in + out))
 static inline array xavier_normal(int in, int out, const af::dtype ty = f32)
 {
-    return af::randn({in, out, 1, 1}, ty) * sqrt(2.0 / (in + out));
+    return af::randn({in, out, 1, 1}, ty) * std::sqrt(2.0 / (in + out));
 }
 
 static inline array zeros(int in, int out, const af::dtype ty = f32)
