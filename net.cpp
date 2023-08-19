@@ -221,14 +221,13 @@ void Adam::step(void)
     for (auto &p : params) {
         static int t = 0;
         t++;
-
         if (weight_decay > 0.0)
             p.param->grad += weight_decay * p.param->data;
 
         p.mean = beta1 * p.mean + (1 - beta1) * p.param->grad;
         p.variance = beta2 * p.variance + (1 - beta2) * p.param->grad * p.param->grad;
-        array mean_hat = p.mean / (1 - pow(beta1, t));
-        array variance_hat = p.variance / (1 - pow(beta2, t));
+        array mean_hat = p.mean / (1 - std::pow(beta1, t));
+        array variance_hat = p.variance / (1 - std::pow(beta2, t));
         p.param->data -= lr * mean_hat / (af::sqrt(variance_hat) + epsilon);
 
         p.param->zero_grad();
