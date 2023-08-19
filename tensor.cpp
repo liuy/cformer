@@ -147,6 +147,8 @@ static void bwd_divf(tensor *a, tensor *b, tensor *p)
 
 static array fwd_matmul(tensor *a, tensor *b, tensor *p)
 {
+    cf_assert(a->data.type() == b->data.type(), "Type Mismatch lhs(%s) != rhs(%s)",
+              array_typename[a->data.type()], array_typename[b->data.type()]);
     return af::matmul(a->data, b->data);
 }
 
@@ -469,8 +471,12 @@ OPERATOR(reshape);
 OPERATOR(transpose);
 
 #define VA_LIST(...) __VA_ARGS__
-#define METHOD(name, args, new_arg, op, stmts...) tensor& tensor::name(VA_LIST args) \
-    { tensor *r = new tensor(this, new_arg, &oper_##op); stmts; return *r; }
+#define METHOD(name, args, new_arg, op, stmts...) \
+    tensor& tensor::name(VA_LIST args) { \
+        tensor *r = new tensor(this, new_arg, &oper_##op); \
+        stmts; \
+        return *r; \
+    }
 METHOD(matmul, (tensor &t), &t, matmul)
 METHOD(operator+, (tensor &t), &t, add)
 METHOD(operator-, (tensor &t), &t, sub)

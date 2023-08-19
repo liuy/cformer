@@ -21,7 +21,7 @@ run: cformer
 	@build/cformer
 
 test:
-	@cmake -B build -DCF_TEST=on && cmake --build build -t test_cformer -t test # -- ARGS="-V"
+	@cmake -B build -DCF_DEBUG=$(debug) -DCF_TEST=on && cmake --build build -t test_cformer -t test # -- ARGS="-V"
 
 clean:
 	@rm -rf build

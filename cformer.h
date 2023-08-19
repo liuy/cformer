@@ -405,9 +405,16 @@ static inline void _af_debug(Args... args)
 #define cf_debug(fmt, ...) do { \
     fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
     } while (0)
+#define cf_assert(cond, fmt, ...) do { \
+    if (!(cond)) { \
+        fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        exit(EXIT_FAILURE); \
+    } \
+    } while (0)
 #else
     #define af_debug(...) do {} while (0)
     #define cf_debug(...) do {} while (0)
+    #define cf_assert(...) do {} while (0)
 #endif
 
 #define panic(fmt, ...) do { \
@@ -421,6 +428,8 @@ static inline void _af_debug(Args... args)
         printf("%lld,", a.dims(i)); \
     printf("]\n"); \
     } while (0)
+
+static const char *array_typename[] = {"f32", "c32", "f64", "c64", "b8", "s32", "u32", "u8", "s64", "u64", "s16", "u16", "f16"};
 
 // ********************** helper functions **********************
 static inline std::string read_file(const std::string& file_path)
