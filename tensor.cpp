@@ -439,6 +439,23 @@ static void bwd_transpose(tensor *a, tensor *dummy, tensor *p)
     update_grad(a, af::transpose(p->grad));
 }
 
+static array fwd_stack(tensor *a, tensor *b, tensor *p)
+{
+    return af::join(p->param.dim, b->data, a->data);
+}
+
+static void bwd_stack(tensor *a, tensor *b, tensor *p)
+{
+    if (p->param.dim == 0) {
+        update_grad(b, p->grad.rows(0, b->data.dims(0) - 1));
+        update_grad(a, p->grad.rows(b->data.dims(0), a->data.dims(0) + b->data.dims(0) - 1));
+    } else if (p->param.dim == 1) {
+        update_grad(b, p->grad.cols(0, b->data.dims(1) - 1));
+        update_grad(a, p->grad.cols(b->data.dims(1), a->data.dims(1) + b->data.dims(1) - 1));
+    } else
+        panic("stack only support dim 0 or 1");
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -469,6 +486,7 @@ OPERATOR(divf);
 OPERATOR(slice);
 OPERATOR(reshape);
 OPERATOR(transpose);
+OPERATOR(stack);
 
 #define VA_LIST(...) __VA_ARGS__
 #define METHOD(name, args, new_arg, op, stmts...) \
@@ -511,6 +529,7 @@ METHOD(slice, (int dim, int begin, int end), nullptr, slice, \
        r->param.dim = dim; r->param.int1 = begin; r->param.int2 = end)
 METHOD(reshape, (const af::dim4 &dims), nullptr, reshape, r->param.dim4 = dims)
 METHOD(T, (void), nullptr, transpose)
+METHOD(stack, (tensor &t, int dim), &t, stack, r->param.dim = dim)
 
 static inline tensor& detach_tensor(tensor &t)
 {

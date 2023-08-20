@@ -128,6 +128,12 @@ struct tensor {
      * For an array with more than two dimensions, the first two dimensions are transposed.
      */
     tensor& T(void);
+    /// @brief Concatenate tensors along the dimension dim.
+    /// For e.g, t1 = [1, 1], t2 = [2, 2], t2.stack(t1, 0) = [[1, 1],[2, 2]]
+    /// @param dim along which dimension to concatenate
+    /// @param tensor the tensor to concatenate
+    /// @return the reference of the concatenated tensor
+    tensor& stack(tensor &t, int dim = 0);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);

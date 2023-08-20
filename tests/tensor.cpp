@@ -492,3 +492,26 @@ TEST(Tensor, onehot)
     af_print(y);
     array_eq(y, {0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f});
 }
+
+TEST(Tensor, stack)
+{
+    tensor x(af::constant(1, 3, 3), true);
+    tensor &x1 = x.slice(0, 0, 0) * 1;
+    tensor &x2 = x.slice(0, 1, 1) * 2;
+    tensor &x3 = x.slice(0, 2, 2) * 3;
+    tensor y = x3.stack(x2.stack(x1, 0), 0);
+    y.backward();
+    array_eq(y.data, {1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f});
+    array_eq(x.grad, {1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f});
+    y.destroy_graph();
+    x.zero_grad();
+
+    tensor y1 = x.slice(1, 0, 0) * 1;
+    tensor y2 = x.slice(1, 1, 1) * 2;
+    tensor y3 = x.slice(1, 2, 2) * 3;
+    y = y3.stack(y2.stack(y1, 1), 1);
+    y.backward();
+    array_eq(y.data, {1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 3.0f, 3.0f, 3.0f});
+    array_eq(x.grad, {1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 3.0f, 3.0f, 3.0f});
+    y.destroy_graph();
+}
