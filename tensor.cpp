@@ -105,6 +105,9 @@ static void bwd_subf(tensor *a, tensor *b, tensor *p)
 
 static array fwd_mul(tensor *a, tensor *b, tensor *p)
 {
+    cf_assert(a->data.dims(0) == b->data.dims(0) && a->data.dims(1) == b->data.dims(1),
+        "Dimension Mismatch a[%lld, %lld] != b[%lld, %lld]", a->data.dims(0), a->data.dims(1),
+        b->data.dims(0), b->data.dims(1));
     return a->data * b->data;
 }
 
@@ -149,6 +152,8 @@ static array fwd_matmul(tensor *a, tensor *b, tensor *p)
 {
     cf_assert(a->data.type() == b->data.type(), "Type Mismatch lhs(%s) != rhs(%s)",
               array_typename[a->data.type()], array_typename[b->data.type()]);
+    cf_assert(a->data.dims(1) == b->data.dims(0), "Dimension Mismatch lhs(%lld) != rhs(%lld)",
+              a->data.dims(1), b->data.dims(0));
     return af::matmul(a->data, b->data);
 }
 

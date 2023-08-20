@@ -2,7 +2,7 @@
 
 static void txt_reader(struct data &d)
 {
-    std::string txt = read_file("data/shakespeare.txt");
+    std::string txt = read_file("data/test.txt");
     auto v = d.tokenizer.encode(txt);
     array a = array(v.size(), v.data()).as(f32);
     d.train_x.init(a(af::seq(0, a.elements() - 2)));
@@ -14,16 +14,16 @@ int main(int argc, char* argv[])
     data set(txt_reader, false);
     set.load();
     seqnet model {
-        new Embedding(set.tokenizer.vocab.size(), 100),
-        // new LSTM(100, 10, 2),
-        // new Linear(10, set.tokenizer.vocab.size(), LogSoftmax),
+        new Embedding(set.tokenizer.vocab.size(), 15),
+        new LSTM(15, 10, 1),
+        new Linear(10, set.tokenizer.vocab.size(), LogSoftmax),
     };
     af::timer t = af::timer::start();
     SGD op(model.params, 2e-4);
     trainer tr = {
         .epochs = 20,
-        .batch_size = 512,
-        .seq_len = 16,
+        .batch_size = 1,
+        .seq_len = 4,
         .optimizer = op,
         .loss_fn = log_softmax_cross_entropy,
         .metrics_fn = categorical_accuracy,

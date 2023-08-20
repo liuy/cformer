@@ -326,10 +326,30 @@ struct Embedding : layer {
 
 struct lstm_cell {
     bool no_bias;
+    int in_size, out_size;
+    af::dtype type;
     tensor weight_ih = tensor(array(), true), weight_hh = tensor(array(), true);
     tensor bias_ih = tensor(array(), true), bias_hh = tensor(array(), true);
+    tensor hidden_state, cell_state;
     lstm_cell(int in, int out, bool nb = false, const af::dtype t = f32);
-    tensor& forward(tensor &x, tensor &h, tensor &c);
+    tensor* forward(tensor &x);
+    std::vector <tensor *> parameters(void) {
+        if (no_bias) return {&weight_ih, &weight_hh};
+        else return {&weight_ih, &weight_hh, &bias_ih, &bias_hh};
+    }
+    layer_stat stat(void) {
+        return {in_size, out_size, no_bias ? weight_ih.data.elements() + weight_hh.data.elements() :
+                weight_ih.data.elements() + weight_hh.data.elements() +
+                bias_ih.data.elements() + bias_hh.data.elements()};
+    }
+};
+
+struct LSTM : layer {
+    std::vector<lstm_cell> cells;
+    LSTM(int in, int out, int num_layers = 1, bool nb = false, const af::dtype t = f32);
+    tensor& forward(tensor &x, bool training) override;
+    std::vector<tensor *> parameters(void) override;
+    layer_stat stat(void) override;
 };
 
 struct optimizer {

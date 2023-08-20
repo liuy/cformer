@@ -24,7 +24,7 @@ tensor& Linear::forward(tensor &x, bool training)
 }
 
 /**
- * Maps token indices to one-hot vectors, then projects to embedding vectors
+ * Maps token indices to one-hot vectors, then projects to embedding space
  *
  * Input: x of shape (seq_len, batch_size)
  * Output: shape (seq_len, batch_size, out)
@@ -33,9 +33,67 @@ tensor& Embedding::forward(tensor& x, bool training)
 {
     x.forward();
     af::dim4 dims = x.data.dims();
-    dims[x.data.numdims()] = weight.data.dims(1); // (seq_len, batch_size, out)
+    dims[2] = weight.data.dims(1); // (seq_len, batch_size, out)
     x.init(onehot(x.data, weight.data.dims(0))); // (seq_len * batch_size, in)
     return x.matmul(weight).reshape(dims);
+}
+
+LSTM::LSTM(int in, int out, int num_layers, bool nb, const af::dtype t)
+{
+    name = "LSTM"; no_bias = nb;
+    cells.push_back(lstm_cell(in, out, nb, t));
+    for (int i = 0; i < num_layers - 1; i++)
+        cells.push_back(lstm_cell(out, out, nb, t));
+}
+
+/**
+ * Transforms the features in the embedding space to the hidden space
+ *
+ * Input: x of shape (seq_len, batch_size, in)
+ * Output: shape (seq_len * batch_size, out)
+*/
+tensor& LSTM::forward(tensor &x, bool training)
+{
+    x.forward();
+    dim_t seq_len = x.data.dims(0);
+    dim_t batch_size = x.data.dims(1);
+    dim_t in_size = x.data.dims(2);
+    dim_t out_size = cells[0].out_size;
+    tensor *y = nullptr;
+
+    for (int i = 0; i < seq_len; i++) {
+        tensor* seq = &x.slice(0, i, i).reshape({ batch_size, in_size });
+        for (auto& cell : cells)
+            seq = cell.forward(*seq);
+        if (!y)
+            y = &seq->reshape({1, batch_size, out_size});
+        else
+            y = &seq->reshape({1, batch_size, out_size}).stack(*y, 0);
+    }
+    af::dim4 dims = { seq_len * batch_size, out_size };
+    return y->reshape(dims);
+}
+
+std::vector<tensor *> LSTM::parameters(void)
+{
+    std::vector<tensor*> ret;
+    for (auto& c : cells) {
+        auto p = c.parameters();
+        ret.insert(ret.end(), p.begin(), p.end());
+    }
+    return ret;
+}
+
+layer_stat LSTM::stat(void)
+{
+    layer_stat ret = { 0, 0, 0 };
+    for (auto& c : cells) {
+        auto s = c.stat();
+        ret.num_params += s.num_params;
+    }
+    ret.in = cells[0].in_size;
+    ret.out = cells[0].out_size;
+    return ret;
 }
 
 // rand uniform value in [-sqrt(1/out), sqrt(1/out)] as suggested by PyTorch
@@ -45,7 +103,8 @@ static array lstm_uniform(int in, int out, const af::dtype t)
     return af::randu(in, out, t) * 2 * r - r;
 }
 
-lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t) : no_bias(nb)
+lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t)
+    : no_bias(nb), in_size(in), out_size(out), type(t)
 {
     weight_ih.init(lstm_uniform(in, out * 4, t));
     weight_hh.init(lstm_uniform(out, out * 4, t));
@@ -73,25 +132,34 @@ lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t) : no_bias(nb)
  * see more details at https://www.bioinf.jku.at/publications/older/2604.pdf
  *
  * Note: {i,f,g,o} are just implemented as slices of one gates tensor.
+ *
+ * Input:  x of shape (batch_size, in)
+ * output: hidden_state of shape (batch_size, out)
  */
-tensor& lstm_cell::forward(tensor &x, tensor &hidden_state, tensor &cell_state)
+tensor* lstm_cell::forward(tensor &x)
 {
-    tensor &gates = x.matmul(weight_ih) + hidden_state.matmul(weight_hh);
+    if (unlikely(hidden_state.data.isempty())) {
+        x.forward();
+        int batch_size = x.data.dims(0);
+        hidden_state.init(zeros(batch_size, out_size, type));
+        cell_state.init(zeros(batch_size, out_size, type));
+    }
+
+    tensor &gates = x.matmul(weight_ih) + hidden_state.detach().matmul(weight_hh);
     if (!no_bias)
         gates += bias_ih.expandas(x) + bias_hh.expandas(x);
 
-    int size = weight_ih.data.dims(1) / 4;
-    tensor &input = gates.slice(1, 0, size - 1).sigmoid();
-    tensor &forget = gates.slice(1, size, size*2 -1).sigmoid();
-    tensor &g = gates.slice(1, 2*size, 3*size - 1).tanh();
-    tensor &output = gates.slice(1, 3*size, 4*size - 1).sigmoid();
+    tensor &input = gates.slice(1, 0, out_size - 1).sigmoid();
+    tensor &forget = gates.slice(1, out_size, out_size*2 -1).sigmoid();
+    tensor &g = gates.slice(1, 2*out_size, 3*out_size - 1).tanh();
+    tensor &output = gates.slice(1, 3*out_size, 4*out_size - 1).sigmoid();
 
-    tensor &new_cell_state = cell_state * forget + input * g;
+    tensor &new_cell_state = cell_state.detach() * forget + input * g;
     tensor &new_hidden_state = new_cell_state.tanh() * output;
     new_hidden_state.forward();
     hidden_state.data = new_hidden_state.data;
     cell_state.data = new_cell_state.data;
-    return new_hidden_state;
+    return &new_hidden_state;
 }
 
 /**
@@ -239,14 +307,18 @@ void seqnet::train(data &set, trainer &tr)
     size_t n = set.num_examples();
     if (tr.seq_len) // time series data need to be reshaped as (*, batch_size)
         set.reshape(tr.batch_size);
-    set.init_train_idx(tr.batch_size);
+    size_t batch_size = tr.seq_len ? tr.seq_len : tr.batch_size;
+    set.init_train_idx(batch_size);
+
     printf("| Epoch | Time Used | Train Loss | Train Accu |\n");
     for (size_t i = 0; i < tr.epochs; i++) {
         af::timer::start();
         for (std::vector<size_t>::iterator it = set.train_idx.begin(); it != set.train_idx.end(); it++) {
             tensor x_batch, y_true;
-            set.get_mini_batch(x_batch, y_true, *it, tr.seq_len ? tr.seq_len : tr.batch_size);
+            set.get_mini_batch(x_batch, y_true, *it, batch_size);
             tensor &y_pred = forward(x_batch, true);
+             if (tr.seq_len)
+                 y_true.data = onehot(y_true.data, set.tokenizer.vocab.size());
             tensor &loss = tr.loss_fn(y_true, y_pred);
 
             loss.backward();

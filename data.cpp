@@ -160,8 +160,6 @@ void data::reshape(size_t batch_size)
     size_t n = train_x.data.elements() / batch_size;
     train_x.init(af::moddims(train_x.data(af::seq(0, n * batch_size - 1)), n, batch_size));
     train_y.init(af::moddims(train_y.data(af::seq(0, n * batch_size - 1)), n, batch_size));
-    printf("train_x shape: %lld %lld\n", train_x.data.dims(0), train_x.data.dims(1));
-    printf("train_y shape: %lld %lld\n", train_y.data.dims(0), train_y.data.dims(1));
 }
 
 std::vector<uint32_t> tokenizer::encode(const std::string& s)
