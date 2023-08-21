@@ -14,14 +14,14 @@ int main(int argc, char* argv[])
     data set(txt_reader, false);
     set.load();
     seqnet model {
-        new Embedding(set.tokenizer.vocab.size(), 30),
-        new RNN(30, 10, 1),
-        new Linear(10, set.tokenizer.vocab.size(), LogSoftmax),
+        new Embedding(set.tokenizer.vocab.size(), 500),
+        new RNN(500, 500, 1),
+        new Linear(500, set.tokenizer.vocab.size(), LogSoftmax),
     };
     af::timer t = af::timer::start();
-    Adam op(model.params, 0.01);
+    Adam op(model.params);
     trainer tr = {
-        .epochs = 2,
+        .epochs = 100,
         .batch_size = 16,
         .seq_len = 8,
         .optimizer = op,

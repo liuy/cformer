@@ -40,11 +40,11 @@ tensor& Embedding::forward(tensor& x, bool training)
 
 static inline rnn_cell* rnn_cell_create(int in, int out, bool nb, const af::dtype t, rnn_t r)
 {
-    if (r = LSTM)
+    if (r == LSTM)
         return new lstm_cell(in, out, nb, t);
-    else if (r = Simple)
+    else if (r == Simple)
         return new elman_cell(in, out, nb, t);
-    else if (r = GRU)
+    else if (r == GRU)
         panic("GRU not implemented yet");
     else
         panic("Unknown RNN type %d", r);
