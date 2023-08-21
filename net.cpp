@@ -38,12 +38,26 @@ tensor& Embedding::forward(tensor& x, bool training)
     return x.matmul(weight).reshape(dims);
 }
 
-LSTM::LSTM(int in, int out, int num_layers, bool nb, const af::dtype t)
+static inline rnn_cell* rnn_cell_create(int in, int out, bool nb, const af::dtype t, rnn_t r)
 {
-    name = "LSTM"; no_bias = nb;
-    cells.push_back(lstm_cell(in, out, nb, t));
+    if (r = LSTM)
+        return new lstm_cell(in, out, nb, t);
+    else if (r = Simple)
+        return new elman_cell(in, out, nb, t);
+    else if (r = GRU)
+        panic("GRU not implemented yet");
+    else
+        panic("Unknown RNN type %d", r);
+}
+
+RNN::RNN(int in, int out, int num_layers, rnn_t r, bool nb, const af::dtype t)
+{
+    name = rnn_name[r]; no_bias = nb;
+    cells.reserve(num_layers);
+
+    cells.emplace_back(rnn_cell_create(in, out, nb, t, r));
     for (int i = 0; i < num_layers - 1; i++)
-        cells.push_back(lstm_cell(out, out, nb, t));
+        cells.emplace_back(rnn_cell_create(out, out, nb, t, r));
 }
 
 /**
@@ -52,19 +66,19 @@ LSTM::LSTM(int in, int out, int num_layers, bool nb, const af::dtype t)
  * Input: x of shape (seq_len, batch_size, in)
  * Output: shape (seq_len * batch_size, out)
 */
-tensor& LSTM::forward(tensor &x, bool training)
+tensor& RNN::forward(tensor &x, bool training)
 {
     x.forward();
     dim_t seq_len = x.data.dims(0);
     dim_t batch_size = x.data.dims(1);
     dim_t in_size = x.data.dims(2);
-    dim_t out_size = cells[0].out_size;
+    dim_t out_size = cells[0]->out_size;
     tensor *y = nullptr;
 
     for (int i = 0; i < seq_len; i++) {
         tensor* seq = &x.slice(0, i, i).reshape({ batch_size, in_size });
-        for (auto& cell : cells)
-            seq = cell.forward(*seq);
+        for (auto cell : cells)
+            seq = cell->forward(*seq);
         if (!y)
             y = &seq->reshape({1, batch_size, out_size});
         else
@@ -74,43 +88,43 @@ tensor& LSTM::forward(tensor &x, bool training)
     return y->reshape(dims);
 }
 
-std::vector<tensor *> LSTM::parameters(void)
+std::vector<tensor *> RNN::parameters(void)
 {
     std::vector<tensor*> ret;
-    for (auto& c : cells) {
-        auto p = c.parameters();
+    for (auto c : cells) {
+        auto p = c->parameters();
         ret.insert(ret.end(), p.begin(), p.end());
     }
     return ret;
 }
 
-layer_stat LSTM::stat(void)
+layer_stat RNN::stat(void)
 {
     layer_stat ret = { 0, 0, 0 };
     for (auto& c : cells) {
-        auto s = c.stat();
+        auto s = c->stat();
         ret.num_params += s.num_params;
     }
-    ret.in = cells[0].in_size;
-    ret.out = cells[0].out_size;
+    ret.in = cells[0]->in_size;
+    ret.out = cells[0]->out_size;
     return ret;
 }
 
 // rand uniform value in [-sqrt(1/out), sqrt(1/out)] as suggested by PyTorch
-static array lstm_uniform(int in, int out, const af::dtype t)
+static array rnn_uniform(int in, int out, const af::dtype t)
 {
     float r = 1.0 / std::sqrt(out);
     return af::randu(in, out, t) * 2 * r - r;
 }
 
-lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t)
-    : no_bias(nb), in_size(in), out_size(out), type(t)
+lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t) : type(t)
 {
-    weight_ih.init(lstm_uniform(in, out * 4, t));
-    weight_hh.init(lstm_uniform(out, out * 4, t));
+    in_size = in; out_size = out; no_bias = nb;
+    weight_ih.init(rnn_uniform(in, out * 4, t));
+    weight_hh.init(rnn_uniform(out, out * 4, t));
     if (!no_bias) {
-        bias_ih.init(lstm_uniform(1, out * 4, t));
-        bias_hh.init(lstm_uniform(1, out * 4, t));
+        bias_ih.init(rnn_uniform(1, out * 4, t));
+        bias_hh.init(rnn_uniform(1, out * 4, t));
     }
 }
 
@@ -125,9 +139,9 @@ lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t)
  * output gate: controls the flow of information from the memory cell to the output.
  *
  * LSTM cell has two states: hidden state and cell state.
- * cell_state: the memory cell of the previous LSTM cell, updated as follows:
+ * cell_state: the memory cell of the previous RNN cell, updated as follows:
  *   cell_state = cell_state * forget_gate + input_gate * g
- * hidden_state: the output of the previous LSTM cell, updated as:
+ * hidden_state: the output of the previous RNN cell, updated as:
  *   hidden_state = tanh(cell_state) * output_gate
  * see more details at https://www.bioinf.jku.at/publications/older/2604.pdf
  *
@@ -159,6 +173,36 @@ tensor* lstm_cell::forward(tensor &x)
     new_hidden_state.forward();
     hidden_state.data = new_hidden_state.data;
     cell_state.data = new_cell_state.data;
+    return &new_hidden_state;
+}
+
+elman_cell::elman_cell(int in, int out, bool nb, const af::dtype t) : type(t)
+{
+    in_size = in; out_size = out; no_bias = nb;
+    weight_ih.init(rnn_uniform(in, out, t));
+    weight_hh.init(rnn_uniform(out, out, t));
+    if (!no_bias) {
+        bias_ih.init(rnn_uniform(1, out, t));
+        bias_hh.init(rnn_uniform(1, out, t));
+    }
+}
+
+// Input:  x of shape (batch_size, in)
+// output: hidden_state of shape (batch_size, out)
+tensor* elman_cell::forward(tensor &x)
+{
+    if (unlikely(hidden_state.data.isempty())) {
+        x.forward();
+        int batch_size = x.data.dims(0);
+        hidden_state.init(zeros(batch_size, out_size, type));
+    }
+
+    tensor &y = x.matmul(weight_ih) + hidden_state.detach().matmul(weight_hh);
+    if (!no_bias)
+        y += bias_ih.expandas(x) + bias_hh.expandas(x);
+    tensor &new_hidden_state = y.tanh();
+    new_hidden_state.forward();
+    hidden_state.data = new_hidden_state.data;
     return &new_hidden_state;
 }
 

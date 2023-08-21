@@ -324,15 +324,12 @@ struct Embedding : layer {
     layer_stat stat(void) override { return {weight.data.dims(0), weight.data.dims(1), weight.data.elements()}; }
 };
 
-struct lstm_cell {
+struct rnn_cell {
     bool no_bias;
     int in_size, out_size;
-    af::dtype type;
     tensor weight_ih = tensor(array(), true), weight_hh = tensor(array(), true);
     tensor bias_ih = tensor(array(), true), bias_hh = tensor(array(), true);
-    tensor hidden_state, cell_state;
-    lstm_cell(int in, int out, bool nb = false, const af::dtype t = f32);
-    tensor* forward(tensor &x);
+    virtual tensor* forward(tensor &x) = 0;
     std::vector <tensor *> parameters(void) {
         if (no_bias) return {&weight_ih, &weight_hh};
         else return {&weight_ih, &weight_hh, &bias_ih, &bias_hh};
@@ -344,12 +341,30 @@ struct lstm_cell {
     }
 };
 
-struct LSTM : layer {
-    std::vector<lstm_cell> cells;
-    LSTM(int in, int out, int num_layers = 1, bool nb = false, const af::dtype t = f32);
+struct lstm_cell : rnn_cell {
+    af::dtype type;
+    tensor hidden_state, cell_state;
+    lstm_cell(int in, int out, bool nb = false, const af::dtype t = f32);
+    tensor* forward(tensor &x) override;
+};
+
+struct elman_cell : rnn_cell {
+    af::dtype type;
+    tensor hidden_state;
+    elman_cell(int in, int out, bool nb = false, const af::dtype t = f32);
+    tensor* forward(tensor &x);
+};
+
+static const char *rnn_name[] = {"RNN", "LSTM", "GRU"};
+enum rnn_t {Simple, LSTM, GRU};
+
+struct RNN : layer {
+    std::vector<rnn_cell *> cells;
+    RNN(int in, int out, int num_layers = 1, rnn_t r = Simple, bool nb = false, const af::dtype t = f32);
     tensor& forward(tensor &x, bool training) override;
     std::vector<tensor *> parameters(void) override;
     layer_stat stat(void) override;
+    ~RNN(void) {for (auto c : cells) delete c;}
 };
 
 struct optimizer {

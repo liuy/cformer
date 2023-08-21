@@ -14,16 +14,16 @@ int main(int argc, char* argv[])
     data set(txt_reader, false);
     set.load();
     seqnet model {
-        new Embedding(set.tokenizer.vocab.size(), 15),
-        new LSTM(15, 10, 1),
+        new Embedding(set.tokenizer.vocab.size(), 30),
+        new RNN(30, 10, 1),
         new Linear(10, set.tokenizer.vocab.size(), LogSoftmax),
     };
     af::timer t = af::timer::start();
-    SGD op(model.params, 2e-4);
+    Adam op(model.params, 0.01);
     trainer tr = {
-        .epochs = 20,
-        .batch_size = 1,
-        .seq_len = 4,
+        .epochs = 2,
+        .batch_size = 16,
+        .seq_len = 8,
         .optimizer = op,
         .loss_fn = log_softmax_cross_entropy,
         .metrics_fn = categorical_accuracy,
@@ -31,8 +31,16 @@ int main(int argc, char* argv[])
     model.summary();
     model.train(set, tr);
 
+    // std::string prompt = "First";
+    // uint32_t i = set.tokenizer.token2idx[prompt];
+    // array v = array(1, &i).as(f32);
+    // tensor x(v);
+    // array_shape(x.data);
+    // tensor y = model(x);
+    // uint32_t y_idx = argmax(y.data).as(u32).scalar<uint32_t>();
+    // std::cout << set.tokenizer.idx2token[y_idx] << std::endl;
+    // for (int i = 0; i < 100; i++) {
+    // }
     // tensor y_pred = model(set.test_x);
-    // float accu = categorical_accuracy(set.test_y, y_pred);
-    // printf("\nTotal time %.1fs, MNIST Test accuracy: %.4f\n", af::timer::stop(t), accu);
     return 0;
 }
