@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     af::timer t = af::timer::start();
     Adam op(model.params, 0.001, 1e-4);
     trainer tr = {
-        .epochs = 150,
+        .epochs = 100,
         .batch_size = 128,
         .seq_len = 16,
         .optimizer = op,
@@ -36,12 +36,13 @@ int main(int argc, char* argv[])
     float accu = categorical_accuracy(y_true, y_pred);
     printf("\nTotal time %.1fs, RNN Train accuracy: %.4f\n", af::timer::stop(t), accu);
 
-    ((RNN *)model.layers[1])->reset_hidden_states();
+    model.reset_hidden_states();
+
     std::string prompt = "You";
     uint32_t i = set.tokenizer.token2idx[prompt];
     tensor x(array(1, &i).as(f32));
 
-    printf("Text generation:\n");
+    printf("\nText generation:\n");
     std::cout << prompt;
     for (int i = 0; i < 400; i++) {
         tensor y = model(x);

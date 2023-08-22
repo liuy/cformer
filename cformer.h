@@ -263,6 +263,7 @@ struct layer {
     virtual tensor& forward(tensor &x, bool = false) = 0;
     virtual std::vector<tensor *> parameters(void) = 0;
     virtual layer_stat stat(void) = 0;
+    virtual void reset_hidden_states(void) {}
     inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
 };
 
@@ -364,7 +365,7 @@ enum rnn_t {Simple, LSTM, GRU};
 struct RNN : layer {
     std::vector<rnn_cell *> cells;
     RNN(int in, int out, int num_layers = 1, rnn_t r = Simple, bool nb = false, const af::dtype t = f32);
-    void reset_hidden_states(void) {for (auto c : cells) c->reset_hidden_states();}
+    void reset_hidden_states(void) override {for (auto c : cells) c->reset_hidden_states();}
     tensor& forward(tensor &x, bool training) override;
     std::vector<tensor *> parameters(void) override;
     layer_stat stat(void) override;
@@ -435,6 +436,7 @@ struct seqnet {
     inline tensor operator()(tensor &x) {
         tensor &t = forward(x); t.forward(); tensor r; r.data = t.data; t.destroy_graph(); return r; }
     void summary(void);
+    void reset_hidden_states(void) {for (auto l : layers) l->reset_hidden_states();}
 };
 
 #ifdef CF_DEBUG

@@ -374,6 +374,12 @@ void seqnet::train(data &set, trainer &tr)
         }
         if (set.shuffle)
             set.shuffle_train_idx();
+        /**
+         * unlike tensorflow, we reset hidden states after each epoch instead of each batch, meaning that
+         * our RNN is stateful during the training process. This improves the accuracy of the model
+         */
+        if (tr.seq_len)
+            reset_hidden_states();
     }
 }
 
