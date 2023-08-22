@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     af::timer t = af::timer::start();
     Adam op(model.params, 0.001, 1e-4);
     trainer tr = {
-        .epochs = 100,
+        .epochs = 150,
         .batch_size = 128,
         .seq_len = 16,
         .optimizer = op,
