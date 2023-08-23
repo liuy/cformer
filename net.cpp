@@ -278,7 +278,7 @@ tensor& log_softmax_cross_entropy(tensor &y_true, tensor &y_pred)
     return -(y_true * y_pred).sum(1);
 }
 
-static inline void update_loss_metrics(float loss, float accu, size_t epoch, bool end)
+static inline void update_loss_metrics(float loss, float accu, af::timer &e, size_t epoch, bool end)
 {
     static std::vector<float> epoch_loss;
     static std::vector<float> epoch_accu;
@@ -290,7 +290,7 @@ static inline void update_loss_metrics(float loss, float accu, size_t epoch, boo
 
     float avg_loss = std::accumulate(epoch_loss.begin(), epoch_loss.end(), 0.0) / epoch_loss.size();
     float avg_accu = std::accumulate(epoch_accu.begin(), epoch_accu.end(), 0.0) / epoch_accu.size();
-    printf("| %-5zu | %-9.1f | %-10.8f | %-10.8f |\n", epoch, af::timer::stop(), avg_loss, avg_accu);
+    printf("| %-5zu | %-9.1f | %-10.8f | %-10.8f |\n", epoch, af::timer::stop(e), avg_loss, avg_accu);
     epoch_loss.clear();
     epoch_accu.clear();
 }
@@ -381,10 +381,12 @@ void seqnet::train(data &set, trainer &tr)
 
     printf("| Epoch | Time Used | Train Loss | Train Accu |\n");
     for (size_t i = 0; i < tr.epochs; i++) {
-        af::timer::start();
+        af::timer e = af::timer::start();
         bar.prefix_text = "| " + std::to_string(i) + " ";
         for (std::vector<size_t>::iterator it = set.train_idx.begin(); it != set.train_idx.end(); it++) {
             tensor x_batch, y_true;
+
+            af::timer b = af::timer::start();
             set.get_mini_batch(x_batch, y_true, *it, batch_size);
             tensor &y_pred = forward(x_batch, true);
              if (tr.seq_len)
@@ -394,12 +396,19 @@ void seqnet::train(data &set, trainer &tr)
             loss.backward();
             tr.optimizer.step();
 
+            float bt = af::timer::stop(b);
             bar.postfix_text = std::to_string(it - set.train_idx.begin() + 1) + "/" + std::to_string(n);
+            std::stringstream str;
+            if ( bt > 1 )
+                str << std::fixed << std::setprecision(2) << bt << " s/it";
+            else
+                str << std::fixed << std::setprecision(2) << 1/bt << " it/s";
+            bar.postfix_text += " " + str.str();
             bar.tick();
 
             float batch_loss = af::mean<float>(loss.data);
             float batch_accu = tr.metrics_fn(y_true, y_pred);
-            update_loss_metrics(batch_loss, batch_accu, i, it == set.train_idx.end() - 1);
+            update_loss_metrics(batch_loss, batch_accu, e, i, it == set.train_idx.end() - 1);
             loss.destroy_graph();
         }
         if (set.shuffle)
