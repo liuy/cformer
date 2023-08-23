@@ -461,6 +461,28 @@ static void bwd_stack(tensor *a, tensor *b, tensor *p)
         panic("stack only support dim 0 or 1");
 }
 
+static array fwd_rslice(tensor *a, tensor *b, tensor *p)
+{
+    af::dim4 dims = a->data.dims();
+    if (p->param.dim == 0)
+        return af::moddims(a->data.row(p->param.int1), {dims[1], dims[2], dims[3]});
+    else if (p->param.dim == 1)
+        return af::moddims(a->data.col(p->param.int1), {dims[0], dims[2], dims[3]});
+    else
+        panic("rslice only support dim 0 or 1");
+}
+
+static void bwd_rslice(tensor *a, tensor *b, tensor *p)
+{
+    af::dim4 dims = a->data.dims();
+    if (p->param.dim == 0)
+        update_grad(a, af::moddims(p->grad, {1, dims[1], dims[2], dims[3]}), 0, p->param.int1, p->param.int1);
+    else if (p->param.dim == 1)
+        update_grad(a, af::moddims(p->grad, {dims[0], 1, dims[2], dims[3]}), 1, p->param.int1, p->param.int1);
+    else
+        panic("rslice only support dim 0 or 1");
+}
+
 #define OPERATOR(name) static oper oper_##name = {#name, fwd_##name, bwd_##name}
 OPERATOR(add);
 OPERATOR(sub);
@@ -492,6 +514,7 @@ OPERATOR(slice);
 OPERATOR(reshape);
 OPERATOR(transpose);
 OPERATOR(stack);
+OPERATOR(rslice);
 
 #define VA_LIST(...) __VA_ARGS__
 #define METHOD(name, args, new_arg, op, stmts...) \
@@ -535,6 +558,8 @@ METHOD(slice, (int dim, int begin, int end), nullptr, slice, \
 METHOD(reshape, (const af::dim4 &dims), nullptr, reshape, r->param.dim4 = dims)
 METHOD(T, (void), nullptr, transpose)
 METHOD(stack, (tensor &t, int dim), &t, stack, r->param.dim = dim)
+METHOD(rslice, (int dim, int n), nullptr, rslice, \
+       r->param.dim = dim; r->param.int1 = n;)
 
 static inline tensor& detach_tensor(tensor &t)
 {

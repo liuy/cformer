@@ -134,6 +134,11 @@ struct tensor {
     /// @param tensor the tensor to concatenate
     /// @return the reference of the concatenated tensor
     tensor& stack(tensor &t, int dim = 0);
+    /// @brief slice and reduce the tensor along the dimension dim.
+    /// @param dim along which dimension to rslice
+    /// @param n the nth slice
+    /// @return the reference of the reduced tensor
+    tensor& rslice(int dim, int n);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);

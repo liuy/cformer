@@ -515,3 +515,24 @@ TEST(Tensor, stack)
     array_eq(x.grad, {1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 3.0f, 3.0f, 3.0f});
     y.destroy_graph();
 }
+
+TEST(Tensor, rslice)
+{
+    tensor x(af::iota({2,2,3}), true);
+    tensor &x1 = x.rslice(0, 0) * 2;
+    tensor &x2 = x.rslice(0, 1).pow(2);
+    tensor y = x1 + x2;
+    y.backward();
+    array_eq(y.data, {1.0f, 13.0f, 33.0f, 61.0f, 97.0f, 141.0f});
+    array_eq(x.grad, {2.0f, 2.0f, 2.0f, 6.0f, 2.0f, 10.0f, 2.0f, 14.0f, 2.0f, 18.0f, 2.0f, 22.0f});
+    x.zero_grad();
+    y.destroy_graph();
+
+    tensor &y1 = x.rslice(1, 0) * 2;
+    tensor &y2 = x.rslice(1, 1).pow(2);
+    y = y1 + y2;
+    y.backward();
+    array_eq(y.data, {4.0f, 11.f, 44.0f, 59.0f, 116.0f, 139.0f});
+    array_eq(x.grad, {2.0f, 2.0f, 4.0f, 6.0f, 2.0f, 2.0f, 12.0f, 14.0f, 2.0f, 2.0f, 20.0f, 22.0f});
+    y.destroy_graph();
+}
