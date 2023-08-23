@@ -427,7 +427,7 @@ struct seqnet {
     const char *name = "Sequential Network";
     std::vector<tensor*> params;
     std::vector<layer*> layers;
-    seqnet(std::initializer_list<layer*> list) { for (auto i : list) add(i); }
+    seqnet(std::initializer_list<layer*> list);
     ~seqnet() { for (auto i : layers) delete i; }
     inline void add(layer *l)
     {layers.push_back(l); for (auto p : l->parameters()) params.push_back(p);}

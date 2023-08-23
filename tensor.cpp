@@ -276,7 +276,7 @@ static array fwd_expandas(tensor *a, tensor *b, tensor *p)
 {
     int d = b->data.dims(0);
     cf_debug("expandas: %d", d);
-    cf_assert(a->data.dims(0) == 1 && d != 0);
+    cf_assert(a->data.dims(0) == 1 && d != 0, "expandas only support dim 0");
     return af::tile(a->data, d);
 }
 
@@ -289,7 +289,7 @@ static void bwd_expandas(tensor *a, tensor *b, tensor *p)
 // Suppport dim=1 right now.
 static array fwd_bmax(tensor *a, tensor *dummy, tensor *p)
 {
-    cf_assert(p->param.dim == 1);
+    cf_assert(p->param.dim == 1, "bmax only support dim 1");
     return bmax(a->data);
 }
 

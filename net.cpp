@@ -346,6 +346,27 @@ void Adam::step(void)
     }
 }
 
+static void check_layer_dimension(struct std::vector<layer *> layers)
+{
+    for (size_t i = 0; i < layers.size() - 1; i++) {
+        int j = 1;
+        if (layers[i]->stat().out == 0)
+            continue;
+        if (layers[i+j]->stat().in == 0)
+                j++; // skip dropout layer for now
+        if (layers[i]->stat().out != layers[i+j]->stat().in)
+            panic("%s layer[%ld] output dimension %lld does not match %s layer[%ld] input dimension %lld",
+                layers[i]->name, i, layers[i]->stat().out, layers[i+j]->name, i+j, layers[i+j]->stat().in);
+    }
+}
+
+seqnet::seqnet(std::initializer_list<layer *> layers)
+{
+    for (auto layer : layers)
+        add(layer);
+    check_layer_dimension(layers);
+}
+
 void seqnet::train(data &set, trainer &tr)
 {
     size_t n = set.num_examples();
