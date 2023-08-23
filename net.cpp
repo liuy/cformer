@@ -1,4 +1,7 @@
 #include "cformer.h"
+#include "pbar.h"
+
+progress_bar bar;
 
 tensor& Linear::forward(tensor &x, bool training)
 {
@@ -369,15 +372,17 @@ seqnet::seqnet(std::initializer_list<layer *> layers)
 
 void seqnet::train(data &set, trainer &tr)
 {
-    size_t n = set.num_examples();
     if (tr.seq_len) // time series data need to be reshaped as (*, batch_size)
         set.reshape(tr.batch_size);
     size_t batch_size = tr.seq_len ? tr.seq_len : tr.batch_size;
     set.init_train_idx(batch_size);
+    size_t n = set.train_idx.size();
+    bar.max = n;
 
     printf("| Epoch | Time Used | Train Loss | Train Accu |\n");
     for (size_t i = 0; i < tr.epochs; i++) {
         af::timer::start();
+        bar.prefix_text = "| " + std::to_string(i) + " ";
         for (std::vector<size_t>::iterator it = set.train_idx.begin(); it != set.train_idx.end(); it++) {
             tensor x_batch, y_true;
             set.get_mini_batch(x_batch, y_true, *it, batch_size);
@@ -388,6 +393,10 @@ void seqnet::train(data &set, trainer &tr)
 
             loss.backward();
             tr.optimizer.step();
+
+            bar.postfix_text = std::to_string(it - set.train_idx.begin() + 1) + "/" + std::to_string(n);
+            bar.tick();
+
             float batch_loss = af::mean<float>(loss.data);
             float batch_accu = tr.metrics_fn(y_true, y_pred);
             update_loss_metrics(batch_loss, batch_accu, i, it == set.train_idx.end() - 1);

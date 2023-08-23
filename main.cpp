@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     Adam op(model.params, 0.001, 1e-4);
     trainer tr = {
         .epochs = 100,
-        .batch_size = 256,
+        .batch_size = 128,
         .seq_len = 16,
         .optimizer = op,
         .loss_fn = log_softmax_cross_entropy,
