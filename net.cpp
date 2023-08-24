@@ -74,18 +74,17 @@ tensor& RNN::forward(tensor &x, bool training)
     x.forward();
     dim_t seq_len = x.data.dims(0);
     dim_t batch_size = x.data.dims(1);
-    dim_t in_size = x.data.dims(2);
     dim_t out_size = cells[0]->out_size;
     tensor *y = nullptr;
 
     for (int i = 0; i < seq_len; i++) {
-        tensor* seq = &x.slice(0, i, i).reshape({ batch_size, in_size });
+        tensor* seq = &x.rslice(0, i);
         for (auto cell : cells)
             seq = cell->forward(*seq);
         if (!y)
             y = &seq->reshape({1, batch_size, out_size});
         else
-            y = &seq->reshape({1, batch_size, out_size}).stack(*y, 0);
+            y = &seq->xstack(*y, 0);
     }
     af::dim4 dims = { seq_len * batch_size, out_size };
     return y->reshape(dims);
