@@ -137,6 +137,7 @@ void data::load(std::initializer_list<transform *> transforms)
     bar.show_percentage = true;
     bar.max = 1;
     af::timer::start();
+    hide_cursor();
     data_reader(*this);
     bar.tick();
     array joint_x = train_x.data;
@@ -150,6 +151,7 @@ void data::load(std::initializer_list<transform *> transforms)
     }
     train_x.init(joint_x);
     train_y.init(joint_y);
+    show_cursor();
 
     printf("%lld training samples, %lld test samples (Used %.1fs)\n",
            train_x.data.dims(0), test_x.data.dims(0), af::timer::stop());

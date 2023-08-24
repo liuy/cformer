@@ -2,6 +2,16 @@
 #include <iostream>
 #include <atomic>
 
+static inline void hide_cursor()
+{
+    std::cout << "\033[?25l";
+}
+
+static inline void show_cursor()
+{
+    std::cout << "\033[?25h";
+}
+
 struct progress_bar {
     int progress{ 0 };
     float bar_width{ 50 };
