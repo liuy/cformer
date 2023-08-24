@@ -1,4 +1,5 @@
 #include "cformer.h"
+#include "pbar.h"
 
 static array read_mnist_images(const std::string& path, size_t &nrow, size_t &ncol)
 {
@@ -79,10 +80,15 @@ array random_rotate::operator()(const array &x, struct data &d)
 #define PIf		3.14159265358979323846f
     size_t batch_size = x.dims(0) * ratio;
     array r(batch_size, d.nrow * d.ncol);
+    progress_bar bar;
+    bar.prefix_text = "Random rotate: ";
+    bar.show_percentage = true;
+    bar.max = batch_size;
     for (size_t i = 0; i < batch_size; i++) {
         array img = af::moddims(x.row(i), d.nrow, d.ncol);
         float angle = random(-degree, degree) * PIf / 180.0f;
         r.row(i) = af::moddims(af::rotate(img, angle), 1, d.nrow * d.ncol);
+        bar.tick();
     }
     //write_mnist_images(r.T(), "mnist_rr_images");
     return r;
@@ -92,6 +98,10 @@ array elastic_transform::operator()(const array &x, struct data &d)
 {
     size_t batch_size = x.dims(0) * ratio;
     array r(batch_size, d.nrow * d.ncol);
+    progress_bar bar;
+    bar.prefix_text = "Elastic transform: ";
+    bar.show_percentage = true;
+    bar.max = batch_size;
     for (size_t i = 0; i < batch_size; i++) {
         array img = af::moddims(x.row(i), d.nrow, d.ncol);
 
@@ -114,6 +124,7 @@ array elastic_transform::operator()(const array &x, struct data &d)
 
         // Interpolate input using grid coordinates
         r.row(i) = af::moddims(af::approx2(img, x_coords, y_coords, AF_INTERP_BILINEAR), 1, d.nrow * d.ncol);
+        bar.tick();
     }
     //write_mnist_images(r.T(), "mnist_et_images");
     return r;
@@ -121,9 +132,13 @@ array elastic_transform::operator()(const array &x, struct data &d)
 
 void data::load(std::initializer_list<transform *> transforms)
 {
-    printf("Loading data...");
+    progress_bar bar;
+    bar.prefix_text = "Loading data: ";
+    bar.show_percentage = true;
+    bar.max = 1;
     af::timer::start();
     data_reader(*this);
+    bar.tick();
     array joint_x = train_x.data;
     array joint_y = train_y.data;
     for (auto tf : transforms) {
@@ -131,6 +146,7 @@ void data::load(std::initializer_list<transform *> transforms)
         joint_x = af::join(0, joint_x, new_x);
         joint_y = af::join(0, train_y.data, joint_y);
         delete tf;
+        bar.tick();
     }
     train_x.init(joint_x);
     train_y.init(joint_y);

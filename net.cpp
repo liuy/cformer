@@ -396,13 +396,12 @@ void seqnet::train(data &set, trainer &tr)
             tr.optimizer.step();
 
             float bt = af::timer::stop(b);
-            bar.postfix_text = std::to_string(it - set.train_idx.begin() + 1) + "/" + std::to_string(n);
             std::stringstream str;
             if ( bt > 1 )
-                str << std::fixed << std::setprecision(2) << bt << " s/it";
+                str << std::fixed << std::setprecision(2) << " " << bt << " s/it";
             else
-                str << std::fixed << std::setprecision(2) << 1/bt << " it/s";
-            bar.postfix_text += " " + str.str();
+                str << std::fixed << std::setprecision(2) << " " << 1/bt << " it/s";
+            bar.postfix_text = str.str();
             bar.tick();
 
             float batch_loss = af::mean<float>(loss.data);

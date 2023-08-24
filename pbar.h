@@ -1,10 +1,12 @@
 #pragma once
 #include <iostream>
+#include <atomic>
 
 struct progress_bar {
-    float progress{ 0.0 };
+    int progress{ 0 };
     float bar_width{ 50 };
     float max{ 100.0 };
+    bool show_percentage{ false };
     std::string prefix_text{ "" };
     std::string start{ "[" };
     std::string fill{ "■" };
@@ -34,6 +36,10 @@ private:
                 std::cout << remainder;
         }
         std::cout << end;
+        if (show_percentage)
+            std::cout << " " << int(progress / max * 100.0) << "%";
+        else
+            std::cout << " " << progress << "/" << max;
         std::cout << " " << postfix_text << "\r";
         std::cout.flush();
         if (progress >= max) {
