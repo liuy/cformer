@@ -129,16 +129,23 @@ struct tensor {
      */
     tensor& T(void);
     /// @brief Concatenate tensors along the dimension dim.
-    /// For e.g, t1 = [1, 1], t2 = [2, 2], t2.stack(t1, 0) = [[1, 1],[2, 2]]
+    /// For e.g, t1 = [1, 2], t2 = [2, 2], t2.stack(t1, 0) = [3, 2]
     /// @param dim along which dimension to concatenate
     /// @param tensor the tensor to concatenate
     /// @return the reference of the concatenated tensor
     tensor& stack(tensor &t, int dim = 0);
     /// @brief slice and reduce the tensor along the dimension dim.
+    /// For e.g, t1 = [2, 2, 3], t1.rslice(0, 0) = [2, 3]
     /// @param dim along which dimension to rslice
     /// @param n the nth slice
     /// @return the reference of the reduced tensor
     tensor& rslice(int dim, int n);
+    /// @brief expand and concatenate the tensor along the dimension dim.
+    /// For e.g, t1 = [2, 3], t2[1, 2, 3], t1.xstack(t2, 0) = [2, 2, 3]
+    /// @param t the tensor to expand and concatenate
+    /// @param dim along which dimension to expand and concatenate
+    /// @return the reference of the expanded and concatenated tensor
+    tensor& xstack(tensor &t, int dim = 0);
     tensor& operator+(tensor &t);
     tensor& operator-(tensor &t);
     tensor& operator*(tensor &t);
