@@ -26,7 +26,7 @@ if(CF_MNIST)
     target_link_libraries(cformer_mnist ArrayFire::af -ldw)
 else()
     add_executable(cformer ${FILES} main.cpp)
-    target_link_libraries(cformer ArrayFire::af -ldw)
+    target_link_libraries(cformer ArrayFire::afcuda -ldw)
 endif()
 
 option(CF_TEST "Enable tests" off)
