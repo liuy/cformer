@@ -395,6 +395,10 @@ void seqnet::train(data &set, trainer &tr)
             loss.backward();
             tr.optimizer.step();
 
+            float batch_loss = af::mean<float>(loss.data);
+            float batch_accu = tr.metrics_fn(y_true, y_pred);
+            loss.destroy_graph();
+
             float bt = af::timer::stop(b);
             std::stringstream str;
             if ( bt > 1 )
@@ -404,10 +408,7 @@ void seqnet::train(data &set, trainer &tr)
             bar.postfix_text = str.str();
             bar.tick();
 
-            float batch_loss = af::mean<float>(loss.data);
-            float batch_accu = tr.metrics_fn(y_true, y_pred);
             update_loss_metrics(batch_loss, batch_accu, e, i, it == set.train_idx.end() - 1);
-            loss.destroy_graph();
         }
         if (set.shuffle)
             set.shuffle_train_idx();
