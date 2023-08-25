@@ -125,8 +125,7 @@ lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t) : type(t)
     weight_ih.init(rnn_uniform(in, out * 4, t));
     weight_hh.init(rnn_uniform(out, out * 4, t));
     if (!no_bias) {
-        bias_ih.init(rnn_uniform(1, out * 4, t));
-        bias_hh.init(rnn_uniform(1, out * 4, t));
+        bias.init(rnn_uniform(1, out * 4, t));
     }
 }
 
@@ -163,7 +162,7 @@ tensor* lstm_cell::forward(tensor &x)
 
     tensor &gates = x.matmul(weight_ih) + hidden_state.detach().matmul(weight_hh);
     if (!no_bias)
-        gates += bias_ih.expandas(x) + bias_hh.expandas(x);
+        gates += bias.expandas(x);
 
     tensor &input = gates.slice(1, 0, out_size - 1).sigmoid();
     tensor &forget = gates.slice(1, out_size, out_size*2 -1).sigmoid();
@@ -184,8 +183,7 @@ elman_cell::elman_cell(int in, int out, bool nb, const af::dtype t) : type(t)
     weight_ih.init(rnn_uniform(in, out, t));
     weight_hh.init(rnn_uniform(out, out, t));
     if (!no_bias) {
-        bias_ih.init(rnn_uniform(1, out, t));
-        bias_hh.init(rnn_uniform(1, out, t));
+        bias.init(rnn_uniform(1, out, t));
     }
 }
 
@@ -201,7 +199,7 @@ tensor* elman_cell::forward(tensor &x)
 
     tensor &y = x.matmul(weight_ih) + hidden_state.detach().matmul(weight_hh);
     if (!no_bias)
-        y += bias_ih.expandas(x) + bias_hh.expandas(x);
+        y += bias.expandas(x);
     tensor &new_hidden_state = y.tanh();
     new_hidden_state.forward();
     hidden_state.data = new_hidden_state.data;

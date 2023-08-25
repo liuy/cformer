@@ -341,17 +341,17 @@ struct rnn_cell {
     bool no_bias;
     int in_size, out_size;
     tensor weight_ih = tensor(array(), true), weight_hh = tensor(array(), true);
-    tensor bias_ih = tensor(array(), true), bias_hh = tensor(array(), true);
+    tensor bias = tensor(array(), true);
     virtual tensor* forward(tensor &x) = 0;
     virtual void reset_hidden_states(void) = 0;
     std::vector <tensor *> parameters(void) {
         if (no_bias) return {&weight_ih, &weight_hh};
-        else return {&weight_ih, &weight_hh, &bias_ih, &bias_hh};
+        else return {&weight_ih, &weight_hh, &bias};
     }
     layer_stat stat(void) {
         return {in_size, out_size, no_bias ? weight_ih.data.elements() + weight_hh.data.elements() :
                 weight_ih.data.elements() + weight_hh.data.elements() +
-                bias_ih.data.elements() + bias_hh.data.elements()};
+                bias.data.elements()};
     }
 };
 
