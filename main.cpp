@@ -21,13 +21,14 @@ int main(int argc, char* argv[])
     af::timer t = af::timer::start();
     Adam op(model.params, 0.001, 1e-4);
     trainer tr = {
-        .epochs = 100,
+        .epochs = 120,
         .batch_size = 256,
         .seq_len = 8,
         .optimizer = op,
         .loss_fn = log_softmax_cross_entropy,
         .metrics_fn = categorical_accuracy,
     };
+
     model.summary();
     model.train(set, tr);
 

@@ -112,7 +112,7 @@ layer_stat RNN::stat(void)
     return ret;
 }
 
-// rand uniform value in [-sqrt(1/out), sqrt(1/out)] as suggested by PyTorch
+// rnn uniform value in [-sqrt(1/out), sqrt(1/out)] as suggested by PyTorch
 static array rnn_uniform(int in, int out, const af::dtype t)
 {
     float r = 1.0 / std::sqrt(out);
@@ -122,11 +122,19 @@ static array rnn_uniform(int in, int out, const af::dtype t)
 lstm_cell::lstm_cell(int in, int out, bool nb, const af::dtype t) : type(t)
 {
     in_size = in; out_size = out; no_bias = nb;
-    weight_ih.init(rnn_uniform(in, out * 4, t));
-    weight_hh.init(rnn_uniform(out, out * 4, t));
-    if (!no_bias) {
-        bias.init(rnn_uniform(1, out * 4, t));
-    }
+    array wh[4];
+    for (int i = 0; i < 4; i++)
+        wh[i] = orthogonal(out, out, t);
+    array wh4 = af::join(1, wh[0], wh[1], wh[2], wh[3]);
+
+    // I've tried to init ih with orthogonal but it worked worse than xavier_uniform
+    // tensorflow suggests xavier_uniform for ih, orthogonal for hh
+    weight_ih.init(xavier_uniform(in, 4 * out, t));
+    weight_hh.init(wh4);
+
+    // I've tried to set bias_inputgate as ones, but it worked worse than zeros
+    if (!no_bias)
+        bias.init(zeros(1, 4 * out, t));
 }
 
 /**

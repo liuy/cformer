@@ -188,6 +188,27 @@ static inline array xavier_normal(int in, int out, const af::dtype ty = f32)
     return af::randn({in, out, 1, 1}, ty) * std::sqrt(2.0 / (in + out));
 }
 
+/**
+ * Orthogonal initializer. (M @ M.T = I)
+ *
+ * If the matrix has fewer rows than columns then the output will have orthogonal rows.
+ * Otherwise, the output will have orthogonal columns.
+ */
+static inline array orthogonal(int in, int out, const af::dtype ty = f32)
+{
+    array a;
+    // hack to make sure q is square with max(in, out) dimension
+    if (in >= out)
+        a = af::randn(in, out, ty);
+    else
+        a = af::randn(out, in, ty);
+
+    array q, r, tau;
+    // qr returns q as shape [dim0, dim0], is this a bug?
+    af::qr(q, r, tau, a);
+    return q(af::seq(0, in - 1), af::seq(0, out - 1));
+}
+
 static inline array zeros(int in, int out, const af::dtype ty = f32)
 {
     return af::constant(0, {in, out}, ty);
