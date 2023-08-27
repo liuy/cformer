@@ -268,6 +268,11 @@ tensor& seqnet::forward(tensor &x, bool training)
     return *y;
 }
 
+tensor& logits_cross_entroy(tensor &y_true, tensor &y_pred)
+{
+    return -(y_true * y_pred.logsm()).sum(1);
+}
+
 tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred)
 {
     return -(y_true*y_pred.log()).sum(1);

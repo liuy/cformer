@@ -623,6 +623,7 @@ void write_mnist_images(const array &x, const std::string& path);
 
 tensor& categorical_cross_entropy(tensor &y_true, tensor &y_pred);
 tensor& log_softmax_cross_entropy(tensor &y_true, tensor &y_pred);
+tensor& logits_cross_entroy(tensor &y_true, tensor &y_pred);
 float categorical_accuracy(tensor &y_true, tensor &y_pred);
 
 #endif /* CFORMER_H */
