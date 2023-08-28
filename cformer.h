@@ -63,6 +63,7 @@ struct tensor {
         : lhs(a), op(o), no_delete(false), need_grad(true), data_computed(false)
         { rhs = new tensor(f); rhs->no_delete = false; }
     void operator=(tensor &t) {copy_delete(t);} // Note: no_delete = true, for root tensor mostly. USE WITH CAUTION!
+    tensor& operator=(tensor &&t) = default; // for t = tensor(a)
     //~tensor() { printf("~tensor() %p\n", this); }
 #undef copy_delete
     // we overload the operators to construct a computational graph. For e.g,
@@ -585,6 +586,19 @@ static inline array onehot(const array &a, int num_classes = 10, bool keep_dims 
         return af::moddims(iden(a, af::span), dims);
     }
     return iden(a, af::span);
+}
+
+static inline array bmax(const array &a)
+{
+    return af::tile(af::max(a, 1), 1, a.dims(1));
+}
+
+static inline array bsum(const array &a, int dim)
+{
+    af::dim4 dims = {1, 1, 1, 1};
+    dims[dim] = a.dims(dim);
+
+    return af::tile(af::sum(a, dim), dims);
 }
 
 // endian conversion helpers

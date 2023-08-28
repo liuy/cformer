@@ -1,18 +1,5 @@
 #include "cformer.h"
 
-static inline array bmax(const array &a)
-{
-    return af::tile(af::max(a, 1), 1, a.dims(1));
-}
-
-static inline array bsum(const array &a, int dim)
-{
-    af::dim4 dims = {1, 1, 1, 1};
-    dims[dim] = a.dims(dim);
-
-    return af::tile(af::sum(a, dim), dims);
-}
-
 static inline array bmean(const array &a, int dim)
 {
     af::dim4 dims = {1, 1, 1, 1};
