@@ -3,7 +3,7 @@
 static void txt_reader(struct data &d)
 {
     std::string txt = read_file("data/test.txt");
-    auto v = d.tokenizer.encode(txt);
+    auto v = d.tokenizer.encode_word(txt);
     array a = array(v.size(), v.data()).as(f32);
     d.train_x.init(a(af::seq(0, a.elements() - 2)));
     d.train_y.init(a(af::seq(1, a.elements() - 1)));
@@ -16,16 +16,16 @@ int main(int argc, char* argv[])
     seqnet model {
         new Embedding(set.tokenizer.vocab.size(), 2000),
         new RNN(2000, 1500, 1, LSTM),
-        new Linear(1500, set.tokenizer.vocab.size(), LogSoftmax),
+        new Linear(1500, set.tokenizer.vocab.size()),
     };
     af::timer t = af::timer::start();
     Adam op(model.params, 0.001, 1e-4);
     trainer tr = {
         .epochs = 120,
         .batch_size = 256,
-        .seq_len = 8,
+        .seq_len = 16,
         .optimizer = op,
-        .loss_fn = log_softmax_cross_entropy,
+        .loss_fn = logits_cross_entroy,
         .metrics_fn = categorical_accuracy,
     };
 

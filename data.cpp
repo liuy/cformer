@@ -180,10 +180,9 @@ void data::reshape(size_t batch_size)
     train_y.init(af::moddims(train_y.data(af::seq(0, n * batch_size - 1)), n, batch_size));
 }
 
-std::vector<uint32_t> tokenizer::encode(const std::string& s)
+inline std::vector<uint32_t> tokenizer::encode(const std::vector<std::string> &tokens)
 {
     std::vector<uint32_t> result;
-    std::vector<std::string> tokens = split(s);
     uint32_t idx = 0;
     for (auto& token : tokens) {
         if (token2idx.find(token) == token2idx.end()) {
@@ -199,18 +198,16 @@ std::vector<uint32_t> tokenizer::encode(const std::string& s)
     return result;
 }
 
-std::string tokenizer::decode(const std::vector<uint32_t>& v)
+std::vector<uint32_t> tokenizer::encode_char(const std::string &s)
 {
-    std::string result;
-    for (const auto &idx : v) {
-        auto iter = idx2token.find(idx);
-        if (unlikely(iter != idx2token.end()))
-            result += iter->second;
-    }
-    return result;
+    std::vector<std::string> tokens;
+    for (const auto &c : s)
+        tokens.push_back(std::string(1, c));
+    return encode(tokens);
 }
 
-std::vector<std::string> tokenizer::split(const std::string &s)
+// split a text into a sequence of words, punctuation, whitespace, control characters, etc.
+static std::vector<std::string> split(const std::string &s)
 {
     std::vector<std::string> tokens;
     std::string token;
@@ -232,4 +229,21 @@ std::vector<std::string> tokenizer::split(const std::string &s)
         tokens.push_back(token);
     }
     return tokens;
+}
+
+std::vector<uint32_t> tokenizer::encode_word(const std::string& s)
+{
+    std::vector<std::string> tokens = split(s);
+    return encode(tokens);
+}
+
+std::string tokenizer::decode(const std::vector<uint32_t>& v)
+{
+    std::string result;
+    for (const auto &idx : v) {
+        auto iter = idx2token.find(idx);
+        if (unlikely(iter != idx2token.end()))
+            result += iter->second;
+    }
+    return result;
 }

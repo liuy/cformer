@@ -253,11 +253,14 @@ struct tokenizer {
     std::vector<std::string> vocab;
     tokenizer() = default;
     // encode a text to a vector of word indices
-    std::vector<uint32_t> encode(const std::string &s);
+    std::vector<uint32_t> encode_word(const std::string &s);
+    // encode a text to a vector of char indices
+    std::vector<uint32_t> encode_char(const std::string &s);
     // decode a vector of word indices to a text
     std::string decode(const std::vector<uint32_t> &v);
-    // split a text into a sequence of words, punctuation, whitespace, control characters, etc.
-    std::vector<std::string> split(const std::string &s);
+private:
+    std::vector<uint32_t> encode(const std::vector<std::string>& tokens);
+
 };
 
 struct data {
