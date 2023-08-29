@@ -5,12 +5,6 @@ static tensor idx2tensor(uint32_t i)
     return tensor(array(1, &i).as(f32));
 }
 
-static array softmax(const array &a)
-{
-    array e = af::exp(a);
-    return e / bsum(e, 1);
-}
-
 static uint32_t tensor2idx(const tensor &t)
 {
     return argmax(softmax(t.data)).as(u32).scalar<uint32_t>();
@@ -56,16 +50,17 @@ int main(int argc, char* argv[])
     set.load();
     seqnet model {
         new Embedding(set.tokenizer.vocab.size(), 256),
-        new RNN(256, 512, 1, LSTM),
-        new Linear(512, 256, ReLU),
-        new Linear(256, set.tokenizer.vocab.size()),
+        new RNN(256, 1000, 1, LSTM),
+        new Linear(1000, 800, ReLU),
+        new Linear(800, 400, ReLU),
+        new Linear(400, set.tokenizer.vocab.size()),
     };
     af::timer t = af::timer::start();
-    Adam op(model.params, 0.001, 1e-4);
+    Adam op(model.params, 0.0005);
     trainer tr = {
         .epochs = 100,
         .batch_size = 128,
-        .seq_len = 32,
+        .seq_len = 16,
         .optimizer = op,
         .loss_fn = logits_cross_entroy,
         .metrics_fn = categorical_accuracy,
@@ -75,7 +70,7 @@ int main(int argc, char* argv[])
     model.train(set, tr);
     printf("\nTotal training time %.1fs\n", af::timer::stop(t));
 
-    generate(model, set.tokenizer, "Dursley woke up", 2000);
+    generate(model, set.tokenizer, "Mr. Dursley", 2000);
 
     return 0;
 }

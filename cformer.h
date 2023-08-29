@@ -601,6 +601,57 @@ static inline array bsum(const array &a, int dim)
     return af::tile(af::sum(a, dim), dims);
 }
 
+/* non-stable for performace */
+static inline array softmax(const array &a)
+{
+    array e = af::exp(a);
+    return e / bsum(e, 1);
+}
+
+static inline array stable_softmax(const array &a)
+{
+    array e = af::exp(a - bmax(a));
+    return e / bsum(e, 1);
+}
+
+/**
+ * logits: data returned by model without activation.
+ * top_k:  keep only top k elements with highest probability.
+ * top_p:  keep only top p elements with cumulative probability.
+ * return logits filtered by top_k or top_p.
+ */
+static inline array logits_filter(array &logits, int top_k = 5, float top_p = 0.0)
+{
+    cf_assert(logits.dims(0) == 1, "logits_filter only support row vector.");
+    array val, idx;
+    af::sort(val, idx, logits, 1 /* dim */, false);
+    int p_nr = 0;
+    if (top_p > 0) {
+        array p = softmax(val);
+        array cp = af::accum(p, 1 /* dim */);
+        p_nr = af::count<int>(cp < top_p);
+    }
+
+    int filter_nr;
+    if (top_k > 0 && p_nr > 0)
+        filter_nr = std::min(top_k, p_nr);
+    else if (top_k > 0 && p_nr == 0)
+        filter_nr = top_k;
+    else if (p_nr > 0 && top_k == 0)
+        filter_nr = p_nr;
+    else
+        panic("Both top_k and top_p are 0.");
+
+    // TODO: find better way to do this
+    array mask = af::constant(0, 1, logits.dims(1), f32);
+    for (int i = 0; i < filter_nr; i++) {
+        uint32_t j = idx(i).scalar<uint32_t>();
+        mask(j) = 1;
+    }
+
+    return logits * mask;
+}
+
 // endian conversion helpers
 #define bswap_16(x) __builtin_bswap16(x)
 #define bswap_32(x) __builtin_bswap32(x)
