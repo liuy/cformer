@@ -614,44 +614,6 @@ static inline array stable_softmax(const array &a)
     return e / bsum(e, 1);
 }
 
-/**
- * logits: data returned by model without activation.
- * top_k:  keep only top k elements with highest probability.
- * top_p:  keep only top p elements with cumulative probability.
- * return logits filtered by top_k or top_p.
- */
-static inline array logits_filter(array &logits, int top_k = 5, float top_p = 0.0)
-{
-    cf_assert(logits.dims(0) == 1, "logits_filter only support row vector.");
-    array val, idx;
-    af::sort(val, idx, logits, 1 /* dim */, false);
-    int p_nr = 0;
-    if (top_p > 0) {
-        array p = softmax(val);
-        array cp = af::accum(p, 1 /* dim */);
-        p_nr = af::count<int>(cp < top_p);
-    }
-
-    int filter_nr;
-    if (top_k > 0 && p_nr > 0)
-        filter_nr = std::min(top_k, p_nr);
-    else if (top_k > 0 && p_nr == 0)
-        filter_nr = top_k;
-    else if (p_nr > 0 && top_k == 0)
-        filter_nr = p_nr;
-    else
-        panic("Both top_k and top_p are 0.");
-
-    // TODO: find better way to do this
-    array mask = af::constant(0, 1, logits.dims(1), f32);
-    for (int i = 0; i < filter_nr; i++) {
-        uint32_t j = idx(i).scalar<uint32_t>();
-        mask(j) = 1;
-    }
-
-    return logits * mask;
-}
-
 // endian conversion helpers
 #define bswap_16(x) __builtin_bswap16(x)
 #define bswap_32(x) __builtin_bswap32(x)
@@ -682,6 +644,62 @@ static inline int random(int from, int to)
 //     static std::uniform_int_distribution<> dis(from, to);
 //     return dis(e);
 // }
+
+/**
+ * \param logits: Data returned by model without activation.
+ * \param top_k:  Sample from only top k elements with highest probability.
+ * \param top_p:  Sample from only top p elements with cumulative probability.
+ * \return Sampled idx from filtered logits by top_k or top_p. If both top_k and top_p
+ *         are set, then sample from min(top_k, top_p) elements.
+ */
+static inline uint32_t logits_sample_next(array &logits, int top_k = 5, float top_p = 0.0)
+{
+    cf_assert(logits.dims(0) == 1, "only support row vector.");
+
+    // fast path for top most likely element
+    if (top_k == 1 && top_p == 0)
+        return argmax(logits).as(u32).scalar<uint32_t>();
+
+    array val, idx;
+    af::sort(val, idx, logits, 1 /* dim */, false);
+    array p = softmax(val);
+    array cp = af::accum(p, 1 /* dim */);
+    uint32_t predict;
+
+    int p_nr = 0;
+    if (top_p > 0) {
+        p_nr = af::count<int>(cp < top_p);
+        p_nr = p_nr > 0 ? p_nr : 1; // at least one element
+    }
+
+    int filter_nr;
+    if (top_k > 0 && p_nr > 0)
+        filter_nr = std::min(top_k, p_nr);
+    else if (top_k > 0 && p_nr == 0)
+        filter_nr = top_k;
+    else if (p_nr > 0 && top_k == 0)
+        filter_nr = p_nr;
+    else
+        panic("Both top_k and top_p are 0.");
+
+    if (filter_nr == 1)
+        return idx(0).scalar<uint32_t>();
+
+    // Sample from multinomial distribution of filtered logits.
+    array filtered_p = p(af::seq(0, filter_nr - 1));
+    array norm = filtered_p / bsum(filtered_p, 1);
+    array cnorm = af::accum(norm, 1 /* dim */);
+    float r = random(0, RAND_MAX) / (float)RAND_MAX;
+
+    for (int i = 0; i < filter_nr; i++) {
+        if (r < cnorm(i).scalar<float>()) {
+            predict = idx(i).scalar<uint32_t>();
+            break;
+        }
+    }
+
+    return predict;
+}
 
 // *********************** data/ functions ***********************
 void mnist_reader(struct data &);

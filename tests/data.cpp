@@ -23,3 +23,29 @@ TEST(Data, tokenizer)
     std::cout << decoded2;
     EXPECT_EQ(s, decoded2);
 }
+
+TEST(Data, logits_sample_next)
+{
+    std::map<int, int> hist;
+    array logits({1, 10}, {0.2990f, -0.2473f, 0.1842f, -1.2897f, -0.3420f, \
+                            0.8222f, -0.6371f, -2.1130f, 0.9659f, -1.0080f});
+
+    uint32_t idx = logits_sample_next(logits, 1);
+    EXPECT_EQ(idx, 8);
+
+    for (int i = 0; i < 10000; i++) {
+        idx = logits_sample_next(logits, 5, 0.7);
+        ++hist[idx];
+    }
+
+    for (auto p : hist)
+        std::cout << p.first << ": " << p.second << '\n';
+
+    EXPECT_EQ(hist.size(), 3);
+    EXPECT_GE(hist[0], 2000);
+    EXPECT_LE(hist[0], 2400);
+    EXPECT_GE(hist[5], 3400);
+    EXPECT_LE(hist[5], 3800);
+    EXPECT_GE(hist[8], 4000);
+    EXPECT_LE(hist[8], 4400);
+}

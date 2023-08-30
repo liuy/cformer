@@ -7,7 +7,7 @@ static tensor idx2tensor(uint32_t i)
 
 static uint32_t tensor2idx(const tensor &t)
 {
-    return argmax(softmax(t.data)).as(u32).scalar<uint32_t>();
+    return argmax(t.data).as(u32).scalar<uint32_t>();
 }
 
 static void generate(seqnet &model, tokenizer &tok, const std::string &prompt, int n)
@@ -27,7 +27,7 @@ static void generate(seqnet &model, tokenizer &tok, const std::string &prompt, i
     x = idx2tensor(idx);
     for (int i = 0; i < n; i++) {
         tensor y = model(x);
-        idx = tensor2idx(y);
+        idx = logits_sample_next(y.data, 1, 0.0);
         std::cout << tok.idx2token[idx];
         x = idx2tensor(idx);
     }
@@ -49,17 +49,17 @@ int main(int argc, char* argv[])
     data set(txt_reader, false);
     set.load();
     seqnet model {
-        new Embedding(set.tokenizer.vocab.size(), 256),
-        new RNN(256, 1000, 1, LSTM),
-        new Linear(1000, 800, ReLU),
-        new Linear(800, 400, ReLU),
-        new Linear(400, set.tokenizer.vocab.size()),
+        new Embedding(set.tokenizer.vocab.size(), 300),
+        new RNN(300, 1200, 1, LSTM),
+        new Linear(1200, 900, ReLU),
+        new Linear(900, 300, ReLU),
+        new Linear(300, set.tokenizer.vocab.size()),
     };
     af::timer t = af::timer::start();
     Adam op(model.params, 0.0005);
     trainer tr = {
-        .epochs = 100,
-        .batch_size = 128,
+        .epochs = 75,
+        .batch_size = 512,
         .seq_len = 16,
         .optimizer = op,
         .loss_fn = logits_cross_entroy,
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     model.train(set, tr);
     printf("\nTotal training time %.1fs\n", af::timer::stop(t));
 
-    generate(model, set.tokenizer, "Mr. Dursley", 2000);
+    generate(model, set.tokenizer, "King", 2000);
 
     return 0;
 }
