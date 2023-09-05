@@ -2,6 +2,7 @@ MAKEFLAGS += --no-print-directory
 
 # make run: run the main program
 # make mnist: run the mnist example
+# make chargen: run the char generator example using LSTM
 # make test: run the test cases
 # make clean: clean the build directory
 
