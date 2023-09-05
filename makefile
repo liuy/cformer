@@ -16,6 +16,11 @@ mnist:
 	@echo "\n==========program output==========\n"
 	@build/cformer_mnist
 
+chargen:
+	@cmake -B build -DCF_CHARGEN=on && cmake --build build -t cformer_chargen
+	@echo "\n==========program output==========\n"
+	@build/cformer_chargen
+
 run: cformer
 	@echo "\n==========program output==========\n"
 	@build/cformer
