@@ -85,6 +85,7 @@ struct tensor {
     //
     // we recommend root and leaf tensors are allocated on the stack and tensors returned
     // by operators are allocated on the heap.
+
     void forward(void);
     void backward(void);
     void backward(const array &g);
@@ -407,6 +408,35 @@ struct RNN : layer {
     std::vector<tensor *> parameters(void) override;
     layer_stat stat(void) override;
     ~RNN(void) {for (auto c : cells) delete c;}
+};
+
+struct multihead_attention {
+    int num_heads;
+    int embed_dim;
+    float dropout;
+    bool no_bias;
+    tensor weight_qkv = tensor(array(), true);
+    tensor bias_qkv = tensor(array(), true);
+    tensor weight_o = tensor(array(), true);
+    tensor bias_o = tensor(array(), true);
+    multihead_attention(int dim, int nheads = 8, bool nb = false, float dp = 0.0, const af::dtype t = f32) {
+        assert(dim % nheads == 0);
+        num_heads = nheads; embed_dim = dim; dropout = dp; no_bias = nb;
+        weight_qkv.init(xavier_normal(dim, dim * 3, t));
+        weight_o.init(xavier_normal(dim, dim, t));
+        if (!no_bias) {
+            bias_qkv.init(zeros(1, dim * 3, t));
+            bias_o.init(zeros(1, dim, t));
+        }
+    }
+    tensor& forward(tensor &x);
+    std::vector<tensor *> parameters(void) {
+        return {&weight_qkv, &weight_o, &bias_o};
+    }
+    layer_stat stat(void) {
+        return {embed_dim, embed_dim, weight_qkv.data.elements() + weight_o.data.elements()
+                + bias_o.data.elements()};
+    }
 };
 
 struct optimizer {

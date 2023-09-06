@@ -26,6 +26,45 @@ tensor& Linear::forward(tensor &x, bool training)
     }
 }
 
+// TODO: implement memory efficient and flash attention.
+static tensor& scaled_dot_product(tensor &q, tensor &k, tensor &v)
+{
+    tensor &qk = q.matmul(k.T());
+    tensor &qk_scaled = qk / std::sqrt(q.data.dims(1));
+    tensor &qk_scaled_sm = qk_scaled.softmax();
+    return qk_scaled_sm.matmul(v);
+}
+
+/**
+ * Multihead Attention is a type of attention mechanism that is used in the Transformer
+ *
+ * Input: x of shape (seq_len, embed_dim, batch_size)
+ * Output: shape (seq_len, embed_dim, batch_size)
+ */
+tensor& multihead_attention::forward(tensor &x)
+{
+    tensor &qkv = x.matmul(weight_qkv);
+    if (!no_bias)
+        qkv += bias_qkv.expandas(x);
+
+    dim_t seq_len = x.data.dims(0);
+    dim_t batch_size = x.data.dims(2);
+    dim_t head_dim = embed_dim / num_heads;
+    // [seq_len, embed_dim * 3, batch_size] - > [seq_len, head_dim * 3, num_heads, batch_size]
+    tensor &qkv_r = qkv.reshape({seq_len, head_dim * 3, num_heads, batch_size});
+    tensor &q = qkv_r.slice(1, 0, head_dim - 1);
+    tensor &k = qkv_r.slice(1, head_dim, head_dim * 2 - 1);
+    tensor &v = qkv_r.slice(1, head_dim * 2, head_dim * 3 - 1);
+
+    tensor &vals = scaled_dot_product(q, k, v);
+    // [seq_len, head_dim, num_heads, batch_size] -> [seq_len, embed_dim, batch_size]
+    tensor &vals_r = vals.reshape({seq_len, embed_dim, batch_size});
+    tensor &out = vals_r.matmul(weight_o);
+    if (!no_bias)
+        out += bias_o.expandas(x);
+    return out;
+}
+
 /**
  * Maps token indices to one-hot vectors, then projects to embedding space
  *
