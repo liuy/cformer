@@ -184,6 +184,15 @@ TEST(Tensor, expandas)
     EXPECT_FLOAT_EQ(first(x.grad), 6);
     EXPECT_FLOAT_EQ(first(y.grad), 2);
     z.destroy_graph();
+
+    tensor t1(af::constant(2, 1, 3), true);
+    tensor t2(af::constant(3, 2, 3, 2), true);
+    tensor &w = t2 * t1.expandas(t2);
+    w.backward();
+    array_eq(w.data, {6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f});
+    array_eq(t1.grad, {12.0f, 12.0f, 12.0f});
+    array_eq(t2.grad, {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f});
+    w.destroy_graph();
 }
 
 TEST(Tensor, log)

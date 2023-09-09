@@ -279,18 +279,30 @@ static void bwd_neg(tensor *a, tensor *dummy, tensor *p)
 }
 
 // For x@w + b to work, b is broadcasted to the same shape as x@w (batch_size, out).
+// For multihead attention, b is broadcasted to the same shape as x@w (seq_len, *, batch_size).
 static array fwd_expandas(tensor *a, tensor *b, tensor *p)
 {
-    int d = b->data.dims(0);
-    cf_debug("expandas: %d", d);
-    cf_assert(a->data.dims(0) == 1 && d != 0, "expandas only support dim 0");
-    return af::tile(a->data, d);
+    dim_t ndim = b->data.numdims();
+    if (ndim == 2)  {
+        cf_assert(a->data.dims(0) == 1, "expandas only support dim 0 or dim 2");
+        return af::tile(a->data, b->data.dims(0));
+    } else if (ndim == 3) {
+        cf_assert(a->data.dims(0) == 1 && a->data.dims(2) == 1, "expandas only support dim 0 or dim 2");
+        return af::tile(a->data, b->data.dims(0), 1, b->data.dims(2));
+    } else
+        panic("expandas only support dim 0 or dim 2");
 }
 
 // y = expandas(x) => dx = sum(dy, dim=0)
 static void bwd_expandas(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, af::sum(p->grad, 0));
+    dim_t ndim = b->data.numdims();
+    if (ndim == 2) {
+        update_grad(a, af::sum(p->grad, 0));
+    } else if (ndim == 3) {
+        update_grad(a, af::sum(af::sum(p->grad, 0), 2));
+    } else
+        panic("expandas only support dim 0 or dim 2");
 }
 
 // Suppport dim=1 right now.
