@@ -557,3 +557,25 @@ TEST(Tensor, xstack)
     array_eq(x.grad, {2.0f, 2.0f, 4.0f, 6.0f, 2.0f, 2.0f, 12.0f, 14.0f, 2.0f, 2.0f, 20.0f, 22.0f});
     y.destroy_graph();
 }
+
+TEST(Tensor, batched_matmul)
+{
+    tensor a(af::constant(1, {2, 3, 1}), true);
+    tensor b(af::constant(2, {3, 2, 2}), true);
+
+    tensor &t1 = a.matmul(b);
+    t1.backward();
+    array_eq(t1.data, {6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f});
+    array_eq(a.grad, {8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f});
+    array_eq(b.grad, {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f});
+    t1.destroy_graph();
+
+    tensor c(af::constant(1, {2, 3, 2}), true);
+    tensor d(af::constant(2, {3, 2, 1}), true);
+    tensor &t2 = c.matmul(d);
+    t2.backward();
+    array_eq(t2.data, {6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f});
+    array_eq(c.grad, {4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f});
+    array_eq(d.grad, {4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f});
+    t2.destroy_graph();
+}

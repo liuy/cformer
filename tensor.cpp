@@ -147,8 +147,28 @@ static array fwd_matmul(tensor *a, tensor *b, tensor *p)
 // y = a @ b => dy = y.grad, da = y.grad @ b.T, db = a.T @ y.grad
 static void bwd_matmul(tensor *a, tensor *b, tensor *p)
 {
-    update_grad(a, af::matmulNT(p->grad, b->data));
-    update_grad(b, af::matmulTN(a->data, p->grad));
+    array matnt = af::matmulNT(p->grad, b->data);
+    array mattn = af::matmulTN(a->data, p->grad);
+    dim_t nt = matnt.numdims();
+    dim_t tn = mattn.numdims();
+
+    if (likely(a->grad.numdims() == nt)) {
+        update_grad(a, matnt);
+    } else { // batched matmul and implicit broadcast
+        if (nt = 3)
+            update_grad(a, af::sum(matnt, 2));
+        else
+            panic("Not support batched matmul with dim > 3");
+    }
+
+    if (likely(b->grad.numdims()  == tn)) {
+        update_grad(b, mattn);
+    } else { // batched matmul and implicit broadcast
+        if (tn = 3)
+            update_grad(b, af::sum(mattn, 2));
+        else
+            panic("Not support batched matmul with dim > 3");
+    }
 }
 
 /**
