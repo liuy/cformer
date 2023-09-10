@@ -1,8 +1,6 @@
 #include "cformer.h"
 #include "pbar.h"
 
-progress_bar bar;
-
 tensor& Linear::forward(tensor &x, bool training)
 {
     tensor &y = x.matmul(weight);
@@ -421,6 +419,7 @@ seqnet::seqnet(std::initializer_list<layer *> layers)
 
 void seqnet::train(data &set, trainer &tr)
 {
+    progress_bar bar;
     if (tr.seq_len) // time series data need to be reshaped as (*, batch_size)
         set.reshape(tr.batch_size);
     size_t batch_size = tr.seq_len ? tr.seq_len : tr.batch_size;
