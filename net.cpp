@@ -278,6 +278,16 @@ tensor& BatchNorm1d::forward(tensor &x, bool training)
 }
 
 /**
+ * Layer Normalization (LN) is different from Batch Normalization (BN) in that it normalizes
+ * features across the features dimension instead of the batch dimension.
+ */
+tensor& LayerNorm1d::forward(tensor &x, bool training)
+{
+    tensor &y = x.batchnorm(1);
+    return y * weight.expandas(x) + bias.expandas(x);
+}
+
+/**
  * Dropout is a regularization technique to prevent overfitting by randomly dropping out some
  * neurons in the network. It is implemented by multiplying the output of a previous activation
  * layer by a mask of 0s and 1s. Divide the output by (1 - p) to keep the sum of the output
