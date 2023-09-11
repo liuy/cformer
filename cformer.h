@@ -112,7 +112,7 @@ struct tensor {
     tensor& logsm(void);
     tensor& submean(int);
     tensor& bstd(int);
-    tensor& batchnorm(int);
+    tensor& normalize1d(int);
     tensor& pow(float);
     /// @brief Slice the tensor along the dimension dim. For e.g, dim=1, T[span, begin:end]
     /// @return the slice of tensor

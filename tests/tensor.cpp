@@ -351,10 +351,10 @@ TEST(Tensor, submean_bstd)
     y.destroy_graph();
 }
 
-TEST(Tensor, batchnorm)
+TEST(Tensor, normalize1d)
 {
     tensor x(array({2,3}, {1.0f, 3.0f, 2.0f, 3.0f, 3.0f, 3.0f}), true);
-    tensor y = x.batchnorm(1);
+    tensor y = x.normalize1d(1);
     y.backward();
     array_eq(y.data, {-1.224744f, 0.0f, 0.0f, 0.0f, 1.224744f, 0.0f});
     array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
@@ -368,7 +368,7 @@ TEST(Tensor, batchnorm)
     y.destroy_graph();
     x.zero_grad();
 
-    y = x.batchnorm(0);
+    y = x.normalize1d(0);
     y.backward();
     array_eq(y.data, {-1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f});
     array_eq(x.grad, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});

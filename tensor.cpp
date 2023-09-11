@@ -393,7 +393,7 @@ static void bwd_submean(tensor *a, tensor *dummy, tensor *p)
     update_grad(a, dx);
 }
 
-static array fwd_batchnorm(tensor *a, tensor *dummy, tensor *p)
+static array fwd_normalize1d(tensor *a, tensor *dummy, tensor *p)
 {
     array mean = bmean(a->data, p->param.dim);
     array var = bvar(a->data, p->param.dim);
@@ -402,7 +402,7 @@ static array fwd_batchnorm(tensor *a, tensor *dummy, tensor *p)
     return (a->data - mean) / std;
 }
 
-static void bwd_batchnorm(tensor *a, tensor *dummy, tensor *p)
+static void bwd_normalize1d(tensor *a, tensor *dummy, tensor *p)
 {
     array y = p->data;
     size_t n = a->data.dims(p->param.dim);
@@ -549,7 +549,7 @@ OPERATOR(logsm);
 OPERATOR(softmax);
 OPERATOR(submean);
 OPERATOR(bstd);
-OPERATOR(batchnorm);
+OPERATOR(normalize1d);
 OPERATOR(pow);
 OPERATOR(addf);
 OPERATOR(subf);
@@ -597,7 +597,7 @@ METHOD(logsm, (void), nullptr, logsm)
 METHOD(softmax, (void), nullptr, softmax)
 METHOD(bstd, (int dim), nullptr, bstd, r->param.dim = dim)
 METHOD(submean, (int dim), nullptr, submean, r->param.dim = dim)
-METHOD(batchnorm, (int dim), nullptr, batchnorm, r->param.dim = dim)
+METHOD(normalize1d, (int dim), nullptr, normalize1d, r->param.dim = dim)
 METHOD(pow, (float p), nullptr, pow, r->param.p = p)
 METHOD(slice, (int dim, int begin, int end), nullptr, slice, \
        r->param.dim = dim; r->param.int1 = begin; r->param.int2 = end)
