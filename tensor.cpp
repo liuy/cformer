@@ -397,7 +397,7 @@ static array fwd_normalize1d(tensor *a, tensor *dummy, tensor *p)
 {
     array mean = bmean(a->data, p->param.dim);
     array var = bvar(a->data, p->param.dim);
-    af::replace(var, var >= 1e-5, 1e-5);
+    af::replace(var, var >= p->param.float1, p->param.float1);
     array std = af::sqrt(var);
     return (a->data - mean) / std;
 }
@@ -407,7 +407,7 @@ static void bwd_normalize1d(tensor *a, tensor *dummy, tensor *p)
     array y = p->data;
     size_t n = a->data.dims(p->param.dim);
     array var = bvar(a->data, p->param.dim);
-    af::replace(var, var >= 1e-5, 1e-5);
+    af::replace(var, var >= p->param.float1, p->param.float1);
     array std = af::sqrt(var);
     array dx = (p->grad - bsum(p->grad, p->param.dim) / n - y * bsum(p->grad * y, p->param.dim) / n) / std;
     update_grad(a, dx);
@@ -415,12 +415,12 @@ static void bwd_normalize1d(tensor *a, tensor *dummy, tensor *p)
 
 static array fwd_pow(tensor *a, tensor *dummy, tensor *p)
 {
-    return af::pow(a->data, p->param.p);
+    return af::pow(a->data, p->param.float1);
 }
 
 static void bwd_pow(tensor *a, tensor *dummy, tensor *p)
 {
-    update_grad(a, p->grad * p->param.p * af::pow(a->data, p->param.p - 1));
+    update_grad(a, p->grad * p->param.float1 * af::pow(a->data, p->param.float1 - 1));
 }
 
 static array fwd_slice(tensor *a, tensor *dummy, tensor *p)
@@ -597,8 +597,8 @@ METHOD(logsm, (void), nullptr, logsm)
 METHOD(softmax, (void), nullptr, softmax)
 METHOD(bstd, (int dim), nullptr, bstd, r->param.dim = dim)
 METHOD(submean, (int dim), nullptr, submean, r->param.dim = dim)
-METHOD(normalize1d, (int dim), nullptr, normalize1d, r->param.dim = dim)
-METHOD(pow, (float p), nullptr, pow, r->param.p = p)
+METHOD(normalize1d, (int dim, float eps), nullptr, normalize1d, r->param.dim = dim; r->param.float1 = eps)
+METHOD(pow, (float p), nullptr, pow, r->param.float1 = p)
 METHOD(slice, (int dim, int begin, int end), nullptr, slice, \
        r->param.dim = dim; r->param.int1 = begin; r->param.int2 = end)
 METHOD(reshape, (const af::dim4 &dims), nullptr, reshape, r->param.dim4 = dims)

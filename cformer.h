@@ -30,7 +30,7 @@ struct param {
     int dim;           // parameter of lhs
     int int1;          // first int parameter
     int int2;          // second int parameter
-    float p;           // parameter of pow oper
+    float float1;      // first float parameter
     af::dim4 dim4;     // parameter of reshape oper
 };
 
@@ -112,7 +112,12 @@ struct tensor {
     tensor& logsm(void);
     tensor& submean(int);
     tensor& bstd(int);
-    tensor& normalize1d(int);
+    /**
+     * @brief Normalize(subtract mean and divide by standard deviation) tensor along the dimension dim.
+     * @param dim The dimension along which the normalization is performed.
+     * @param eps Epsilon to avoid dividing by zero.
+     */
+    tensor& normalize1d(int dim, float eps = 1e-5);
     tensor& pow(float);
     /// @brief Slice the tensor along the dimension dim. For e.g, dim=1, T[span, begin:end]
     /// @return the slice of tensor

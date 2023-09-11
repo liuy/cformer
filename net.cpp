@@ -270,7 +270,7 @@ tensor& BatchNorm1d::forward(tensor &x, bool training)
         moving_mean.data = momentum * moving_mean.data + (1 - momentum) * mean;
         moving_vari.data = momentum * moving_vari.data + (1 - momentum) * vari;
 
-        tensor &y = x.normalize1d(0);
+        tensor &y = x.normalize1d(0, epsilon);
         return y * weight.expandas(x) + bias.expandas(x);
     }
     tensor &y = (x - moving_mean.expandas(x)) / (moving_vari.expandas(x) + epsilon).pow(0.5);
@@ -279,11 +279,12 @@ tensor& BatchNorm1d::forward(tensor &x, bool training)
 
 /**
  * Layer Normalization (LN) is different from Batch Normalization (BN) in that it normalizes
- * features across the features dimension instead of the batch dimension.
+ * features across the features dimension instead of the batch dimension. Assume that the
+ * features dimension is the *second* dimension.
  */
 tensor& LayerNorm1d::forward(tensor &x, bool training)
 {
-    tensor &y = x.normalize1d(1);
+    tensor &y = x.normalize1d(1, epsilon);
     return y * weight.expandas(x) + bias.expandas(x);
 }
 
