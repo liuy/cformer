@@ -101,6 +101,14 @@ struct tensor {
     tensor& sigmoid(void);
     tensor& tanh(void);
     tensor& softmax(void);
+    /**
+     * Gaussian Error Linear Unit is used for LM and transformer models like GPT-2 and BERT,
+     * this functions prevents the problem of vanishing gradients also unlike ELU, it has a
+     * continuous derivative at 0, which can sometimes make training faster.
+     *
+     * Reference: Gaussian Error Linear Units (GELU) paper: https://arxiv.org/abs/1606.08415
+     */
+    tensor& gelu(void);
     /// @brief Sum all values along dimension dim and broadcast to the original shape.
     /// @param dim The dimension along which the add operation occurs.
     tensor& bsum(int);
@@ -289,8 +297,8 @@ struct data {
 
 typedef array (*initializer_t)(int, int, const af::dtype);
 
-static const char *activ_name[] = {"None", "ReLU", "Sigmoid", "Tanh", "Softmax", "LogSoftmax"};
-enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax, LogSoftmax};
+static const char *activ_name[] = {"None", "ReLU", "Sigmoid", "Tanh", "Softmax", "LogSoftmax", "GELU"};
+enum activ_t {None, ReLU, Sigmoid, Tanh, Softmax, LogSoftmax, GELU};
 
 struct layer_stat {
     dim_t in;

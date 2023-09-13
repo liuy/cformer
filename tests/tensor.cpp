@@ -588,3 +588,13 @@ TEST(Tensor, batched_matmul)
     array_eq(d.grad, {4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f});
     t2.destroy_graph();
 }
+
+TEST(Tensor, gelu)
+{
+    tensor x(array({1,5}, {-3.0f, -1.0f, 0.0f, 1.0f, 3.0f}), true);
+    tensor &y = x.gelu();
+    y.backward();
+    array_eq(y.data, {-0.00404969f, -0.15865526f, 0.00000000f, 0.84134471f, 2.99595022f});
+    array_eq(x.grad, {-0.01194565f, -0.08331548f, 0.50000000f, 1.08331549f, 1.01194561f});
+    y.destroy_graph();
+}

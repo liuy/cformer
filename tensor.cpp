@@ -214,6 +214,23 @@ static void bwd_relu(tensor *a, tensor *dummy, tensor *p)
     update_grad(a, af::select(a->data > zero, p->grad, zero));
 }
 
+static array fwd_gelu(tensor *a, tensor *dummy, tensor *p)
+{
+    // This is approximation of gelu from pytorch.
+    // return 0.5 * a->data * (1.0 + af::tanh(std::sqrt(2 / M_PIf32) * (a->data + 0.044715 * af::pow(a->data, 3))));
+    array cdf = 0.5 * (1.0 + af::erf(a->data / M_SQRT2f32)); // without approximation
+    return  a->data * cdf;
+}
+
+static void bwd_gelu(tensor *a, tensor *dummy, tensor *p)
+{
+    array x = a->data;
+    array cdf = 0.5 * (1.0 + af::erf(x / M_SQRT2f32));
+    array pdf = exp(-0.5 * x * x) / std::sqrt(2 * M_PIf32);
+    array grad = p->grad * (cdf + x * pdf);
+    update_grad(a, grad);
+}
+
 // y = broadcast(sum(x)), sum(x) over dim and then bradcast it to same shape as x.
 // sum() redues the dimension of x along dim to 1 and brad() matmul it back by a broadcasting matrix.
 // broadcast(a) = B0 @ a if dim = 0, B0 = ones(a.dims[0], 1)
@@ -539,6 +556,7 @@ OPERATOR(log);
 OPERATOR(exp);
 OPERATOR(relu);
 OPERATOR(sigmoid);
+OPERATOR(gelu);
 OPERATOR(tanh);
 OPERATOR(bsum);
 OPERATOR(sum);
@@ -587,6 +605,7 @@ METHOD(log, (void), nullptr, log)
 METHOD(exp, (void), nullptr, exp)
 METHOD(relu, (void), nullptr, relu)
 METHOD(sigmoid, (void), nullptr, sigmoid)
+METHOD(gelu, (void), nullptr, gelu)
 METHOD(tanh, (void), nullptr, tanh)
 METHOD(bsum, (int dim), nullptr, bsum, r->param.dim = dim)
 METHOD(sum, (int dim), nullptr, sum, r->param.dim = dim)

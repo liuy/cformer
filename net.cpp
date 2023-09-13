@@ -17,6 +17,8 @@ tensor& Linear::forward(tensor &x, bool training)
         return y.softmax();
     case LogSoftmax:
         return y.logsm();
+    case GELU:
+        return y.gelu();
     case None:
         return y;
     default:
