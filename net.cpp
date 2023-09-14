@@ -302,7 +302,7 @@ tensor& LayerNorm1d::forward(tensor &x, bool training)
  */
 tensor& Dropout::forward(tensor& x, bool training)
 {
-    if (training) {
+    if (training && p > 0) {
         x.forward();
         auto mask = af::randu(x.data.dims()) > p;
         tensor &y = x * mask / (1.0 - p);

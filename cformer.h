@@ -383,7 +383,10 @@ struct LayerNorm1d : layer {
 
 struct Dropout : layer {
     float p;
-    Dropout(float prob = 0.2) : p(prob) {name = "Dropout"; no_bias = true;}
+    Dropout(float prob = 0.2) : p(prob) {
+        assert(p >= 0.0 && p < 1.0);
+        name = "Dropout"; no_bias = true;
+        }
     tensor& forward(tensor &x, bool training = false) override;
     std::vector<tensor *> parameters(void) override { return {}; }
     layer_stat stat(void) override { return {0, 0, 0}; }
