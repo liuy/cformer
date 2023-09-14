@@ -324,7 +324,7 @@ struct layer {
     virtual std::vector<tensor *> parameters(void) = 0;
     virtual layer_stat stat(void) = 0;
     virtual void reset_hidden_states(void) {}
-    inline tensor& operator()(tensor &x) { return forward(x); } // make layer as functor for convention
+    inline tensor& operator()(tensor &x, bool training = false) { return forward(x, training); } // make layer as functor for convention
 };
 
 struct Linear : layer {
@@ -454,6 +454,8 @@ struct multihead_attention {
     tensor bias_qkv = tensor(array(), true);
     tensor weight_o = tensor(array(), true);
     tensor bias_o = tensor(array(), true);
+    Dropout attn_drop = Dropout(dropout);
+    Dropout proj_drop = Dropout(dropout);
     multihead_attention(int dim, int nheads = 8, bool nb = false, float dp = 0.0, const af::dtype t = f32) {
         assert(dim % nheads == 0);
         num_heads = nheads; embed_dim = dim; dropout = dp; no_bias = nb;
@@ -464,7 +466,7 @@ struct multihead_attention {
             bias_o.init(zeros(1, dim, t));
         }
     }
-    tensor& forward(tensor &x);
+    tensor& forward(tensor &x, bool training = false);
     std::vector<tensor *> parameters(void) {
         return {&weight_qkv, &weight_o, &bias_o};
     }

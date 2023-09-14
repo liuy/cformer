@@ -27,12 +27,13 @@ tensor& Linear::forward(tensor &x, bool training)
 }
 
 // TODO: implement memory efficient and flash attention.
-static tensor& scaled_dot_product(tensor &q, tensor &k, tensor &v)
+static tensor& scaled_dot_product(multihead_attention *ma, tensor &q, tensor &k, tensor &v, bool training)
 {
     tensor &qk = q.matmul(k.T());
     tensor &qk_scaled = qk / std::sqrt(q.data.dims(1));
-    tensor &qk_scaled_sm = qk_scaled.softmax();
-    return qk_scaled_sm.matmul(v);
+    tensor &attn = qk_scaled.softmax();
+    ma->attn_drop(attn, training);
+    return attn.matmul(v);
 }
 
 /**
@@ -41,7 +42,7 @@ static tensor& scaled_dot_product(tensor &q, tensor &k, tensor &v)
  * Input: x of shape (seq_len, embed_dim, batch_size)
  * Output: shape (seq_len, embed_dim, batch_size)
  */
-tensor& multihead_attention::forward(tensor &x)
+tensor& multihead_attention::forward(tensor &x, bool training)
 {
     tensor &qkv = x.matmul(weight_qkv);
     if (!no_bias)
@@ -56,13 +57,13 @@ tensor& multihead_attention::forward(tensor &x)
     tensor &k = qkv_r.slice(1, head_dim, head_dim * 2 - 1);
     tensor &v = qkv_r.slice(1, head_dim * 2, head_dim * 3 - 1);
 
-    tensor &vals = scaled_dot_product(q, k, v);
+    tensor &vals = scaled_dot_product(this, q, k, v, training);
     // [seq_len, head_dim, num_heads, batch_size] -> [seq_len, embed_dim, batch_size]
     tensor &vals_r = vals.reshape({seq_len, embed_dim, batch_size});
     tensor &out = vals_r.matmul(weight_o);
     if (!no_bias)
         out += bias_o.expandas(x);
-    return out;
+    return proj_drop(out, training);
 }
 
 /**
