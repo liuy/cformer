@@ -109,8 +109,17 @@ struct tensor {
      * Reference: Gaussian Error Linear Units (GELU) paper: https://arxiv.org/abs/1606.08415
      */
     tensor& gelu(void);
-    /// @brief Sum all values along dimension dim and broadcast to the original shape.
-    /// @param dim The dimension along which the add operation occurs.
+    /**
+     * Sigmoid Linear Units, it serves as a smooth approximation to the ReLU function.
+     * It is used mostly in computer vision tasks.
+     *
+     * Ref: https://arxiv.org/abs/1702.03118
+     */
+    tensor& silu(void);
+    /**
+     * @brief Sum all values along dimension dim and broadcast to the original shape.
+     * @param dim The dimension along which the add operation occurs.
+     */
     tensor& bsum(int);
     tensor& sum(int);
     tensor& expandas(tensor &t);

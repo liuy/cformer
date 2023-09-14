@@ -598,3 +598,13 @@ TEST(Tensor, gelu)
     array_eq(x.grad, {-0.01194565f, -0.08331548f, 0.50000000f, 1.08331549f, 1.01194561f});
     y.destroy_graph();
 }
+
+TEST(Tensor, silu)
+{
+    tensor x(array({1,5}, {-3.0f, -1.0f, 0.0f, 1.0f, 3.0f}), true);
+    tensor &y = x.silu();
+    y.backward();
+    array_eq(y.data, {-0.14227763f, -0.26894143f, 0.00000000f, 0.73105854f, 2.85772228f});
+    array_eq(x.grad, {-0.08810411f,  0.07232948f, 0.50000000f, 0.92767048f, 1.08810413f});
+    y.destroy_graph();
+}

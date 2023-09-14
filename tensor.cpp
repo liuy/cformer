@@ -231,6 +231,17 @@ static void bwd_gelu(tensor *a, tensor *dummy, tensor *p)
     update_grad(a, grad);
 }
 
+static array fwd_silu(tensor *a, tensor *dummy, tensor *p)
+{
+    return a->data * af::sigmoid(a->data);
+}
+
+static void bwd_silu(tensor *a, tensor *dummy, tensor *p)
+{
+    array sig = af::sigmoid(a->data);
+    update_grad(a, p->grad * (sig + a->data * sig * (1 - sig)));
+}
+
 // y = broadcast(sum(x)), sum(x) over dim and then bradcast it to same shape as x.
 // sum() redues the dimension of x along dim to 1 and brad() matmul it back by a broadcasting matrix.
 // broadcast(a) = B0 @ a if dim = 0, B0 = ones(a.dims[0], 1)
@@ -557,6 +568,7 @@ OPERATOR(exp);
 OPERATOR(relu);
 OPERATOR(sigmoid);
 OPERATOR(gelu);
+OPERATOR(silu);
 OPERATOR(tanh);
 OPERATOR(bsum);
 OPERATOR(sum);
@@ -606,6 +618,7 @@ METHOD(exp, (void), nullptr, exp)
 METHOD(relu, (void), nullptr, relu)
 METHOD(sigmoid, (void), nullptr, sigmoid)
 METHOD(gelu, (void), nullptr, gelu)
+METHOD(silu, (void), nullptr, silu)
 METHOD(tanh, (void), nullptr, tanh)
 METHOD(bsum, (int dim), nullptr, bsum, r->param.dim = dim)
 METHOD(sum, (int dim), nullptr, sum, r->param.dim = dim)
