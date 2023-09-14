@@ -27,13 +27,34 @@ tensor& Linear::forward(tensor &x, bool training)
 }
 
 // TODO: implement memory efficient and flash attention.
-static tensor& scaled_dot_product(multihead_attention *ma, tensor &q, tensor &k, tensor &v, bool training)
+static tensor& scaled_dot_product(multihead_attention *ma, tensor &q, tensor &k, tensor &v, array &mask, bool training)
 {
     tensor &qk = q.matmul(k.T());
-    tensor &qk_scaled = qk / std::sqrt(q.data.dims(1));
+    tensor &qk_scaled = qk / std::sqrt(q.data.dims(1)) + mask;
     tensor &attn = qk_scaled.softmax();
     ma->attn_drop(attn, training);
     return attn.matmul(v);
+}
+
+/*
+ * Causal mask is used to prevent attention mechanism from attending to future tokens.
+ * If we are predicting the next word in a sentence, we don't want the model to attend to the
+ * next word because it is not available yet. So we set the future tokens to -inf so that the
+ * softmax of the attention weights of the future tokens will be 0.
+ *
+ * For e.g, if we have a sequence of 4 tokens, the causal mask will be:
+ * [0 -inf -inf -inf]
+ * [0   0  -inf -inf]
+ * [0   0    0  -inf]
+ * [0   0    0    0 ]
+ *
+ * mask shape: (seq_len, seq_len, num_heads, batch_size)
+ */
+static inline array create_causal_mask(dim_t seq_len, dim_t num_heads, dim_t batch_size)
+{
+    array triu = af::upper(af::constant(-af::Inf, seq_len, seq_len, num_heads, batch_size), true);
+    triu -= af::identity(seq_len, seq_len, num_heads, batch_size);
+    return triu;
 }
 
 /**
@@ -44,6 +65,7 @@ static tensor& scaled_dot_product(multihead_attention *ma, tensor &q, tensor &k,
  */
 tensor& multihead_attention::forward(tensor &x, bool training)
 {
+    x.forward();
     tensor &qkv = x.matmul(weight_qkv);
     if (!no_bias)
         qkv += bias_qkv.expandas(x);
@@ -57,7 +79,8 @@ tensor& multihead_attention::forward(tensor &x, bool training)
     tensor &k = qkv_r.slice(1, head_dim, head_dim * 2 - 1);
     tensor &v = qkv_r.slice(1, head_dim * 2, head_dim * 3 - 1);
 
-    tensor &vals = scaled_dot_product(this, q, k, v, training);
+    array mask = create_causal_mask(seq_len, num_heads, batch_size);
+    tensor &vals = scaled_dot_product(this, q, k, v, mask, training);
     // [seq_len, head_dim, num_heads, batch_size] -> [seq_len, embed_dim, batch_size]
     tensor &vals_r = vals.reshape({seq_len, embed_dim, batch_size});
     tensor &out = vals_r.matmul(weight_o);

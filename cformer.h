@@ -459,7 +459,7 @@ struct multihead_attention {
     tensor bias_o = tensor(array(), true);
     Dropout attn_drop = Dropout(dropout);
     Dropout proj_drop = Dropout(dropout);
-    multihead_attention(int dim, int nheads = 8, bool nb = false, float dp = 0.0, const af::dtype t = f32) {
+    multihead_attention(int dim, int nheads = 8, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
         assert(dim % nheads == 0);
         num_heads = nheads; embed_dim = dim; dropout = dp; no_bias = nb;
         weight_qkv.init(xavier_normal(dim, dim * 3, t));
