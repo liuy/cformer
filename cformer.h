@@ -327,6 +327,20 @@ struct layer {
     inline tensor& operator()(tensor &x, bool training = false) { return forward(x, training); } // make layer as functor for convention
 };
 
+struct block {
+    std::vector<layer *> layers;
+    block(std::initializer_list<layer*> list) : layers(list) {}
+    ~block() { for (auto i : layers) delete i; }
+    inline void add(layer *l) {layers.push_back(l);}
+    tensor& forward(tensor &x, bool training = false) {
+        tensor *y = &x;
+        for (auto l : layers)
+            y = &l->forward(*y, training);
+        return *y;
+    }
+    inline tensor& operator()(tensor &x, bool training = false) {return forward(x, training);}
+};
+
 struct Linear : layer {
     initializer_t init;
     tensor weight = tensor(array(), true);
