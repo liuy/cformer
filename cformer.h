@@ -329,6 +329,7 @@ struct layer {
 
 struct block {
     std::vector<layer *> layers;
+    block() = default;
     block(std::initializer_list<layer*> list) : layers(list) {}
     ~block() { for (auto i : layers) delete i; }
     inline void add(layer *l) {layers.push_back(l);}
@@ -386,6 +387,7 @@ struct LayerNorm1d : layer {
     float epsilon;
     tensor weight = tensor(array(), true);
     tensor bias = tensor(array(), true);
+    LayerNorm1d() = default;
     LayerNorm1d(int dim, float e = 1e-5, const af::dtype t = f32)
         : epsilon(e)
         {name = "LN1d"; weight.init(ones(1, dim, t)); bias.init(zeros(1, dim, t));}
@@ -473,6 +475,7 @@ struct multihead_attention {
     tensor bias_o = tensor(array(), true);
     Dropout attn_drop = Dropout(dropout);
     Dropout proj_drop = Dropout(dropout);
+    multihead_attention() = default;
     multihead_attention(int dim, int nheads = 8, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
         assert(dim % nheads == 0);
         num_heads = nheads; embed_dim = dim; dropout = dp; no_bias = nb;
@@ -484,12 +487,37 @@ struct multihead_attention {
         }
     }
     tensor& forward(tensor &x, bool training = false);
+    inline tensor& operator()(tensor &x, bool training = false) {return forward(x, training);}
     std::vector<tensor *> parameters(void) {
         return {&weight_qkv, &weight_o, &bias_o};
     }
     layer_stat stat(void) {
         return {embed_dim, embed_dim, weight_qkv.data.elements() + weight_o.data.elements()
                 + bias_o.data.elements()};
+    }
+};
+
+struct GPT_block {
+    LayerNorm1d ln1;
+    multihead_attention attn;
+    LayerNorm1d ln2;
+    block mlp;
+    GPT_block(int dim, int nheads, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
+        ln1 = LayerNorm1d(dim, 1e-5, t);
+        attn = multihead_attention(dim, nheads, dp, nb, t);
+        ln2 = LayerNorm1d(dim, 1e-5, t);
+        mlp = block({new Linear(dim, dim * 4, GELU, nb, t),
+                     new Linear(dim * 4, dim, None, nb, t),
+                     new Dropout(dp)});
+    }
+    /**
+     * Residual connection is crucial for two reasons:
+     * 1. Similiar to ResNet, it helps to avoid vanishing gradients.
+     * 2. It helps to preserve the information including the position of the sequence from the input.
+     */
+    inline tensor& forward(tensor &x, bool training = false) {
+        tensor &y = x + attn(ln1(x), training);
+        return y + mlp(ln2(y), training);
     }
 };
 
