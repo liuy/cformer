@@ -346,18 +346,24 @@ struct Linear : layer {
     initializer_t init;
     tensor weight = tensor(array(), true);
     tensor bias = tensor(array(), true);
-    Linear(int in, int out, activ_t a = None, bool nb = false, const af::dtype t = f32)
-        : init(a == ReLU ? kaiming_uniform : xavier_uniform)
-    /** Notes on bias initialization:
-     * Generally, there are 4 recommended ways to initialize the bias:
-     * 1. use weight initializer (default for this layer)
-     * 2. constant 0
-     * 3. constant 0.01
-     * 4. just any small random value
-     * You can actually set layer.bias directly if you want to override the default.
-     */
-    {name = "Linear"; act = a; no_bias = nb; weight.init(init(in, out, t));
-    if (!no_bias) bias.init(af::transpose(init(out, 1, t)));}
+    Linear(int in, int out, activ_t a = None, bool nb = false, initializer_t ini = nullptr, const af::dtype t = f32) {
+        /** Notes on bias initialization:
+         * Generally, there are 4 recommended ways to initialize the bias:
+         * 1. use weight initializer (default for this layer)
+         * 2. constant 0
+         * 3. constant 0.01
+         * 4. just any small random value
+         * You can actually set layer.bias directly if you want to override the default.
+         */
+        name = "Linear"; act = a; no_bias = nb;
+        if (!ini)
+            init = a == ReLU ? kaiming_uniform : xavier_uniform;
+        else
+            init = ini;
+        weight.init(init(in, out, t));
+        if (!no_bias)
+            bias.init(af::transpose(init(out, 1, t)));
+    }
     tensor& forward(tensor &x, bool training = false) override;
     std::vector<tensor *> parameters(void) override
     { if (no_bias) return {&weight}; else return {&weight, &bias}; }
@@ -506,8 +512,8 @@ struct GPT_block {
         ln1 = LayerNorm1d(dim, 1e-5, t);
         attn = multihead_attention(dim, nheads, dp, nb, t);
         ln2 = LayerNorm1d(dim, 1e-5, t);
-        mlp = block({new Linear(dim, dim * 4, GELU, nb, t),
-                     new Linear(dim * 4, dim, None, nb, t),
+        mlp = block({new Linear(dim, dim * 4, GELU, nb, xavier_normal, t),
+                     new Linear(dim * 4, dim, None, nb, xavier_normal, t),
                      new Dropout(dp)});
     }
     /**
