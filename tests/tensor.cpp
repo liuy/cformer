@@ -608,3 +608,19 @@ TEST(Tensor, silu)
     array_eq(x.grad, {-0.08810411f,  0.07232948f, 0.50000000f, 0.92767048f, 1.08810413f});
     y.destroy_graph();
 }
+
+TEST(Tensor, reorder)
+{
+    tensor x(array({1,2,3}, {1.0f, 2.0f, 3.0f, 4.0f, 5.0f,6.0f}), true);
+    tensor &y = x.reorder(2, 0, 1);
+    y.backward(array({3,1,2}, {1.0f, 2.0f, 3.0f, 4.0f, 5.0f,6.0f}));
+    array_eq(y.data, {1.0f, 3.0f, 5.0f, 2.0f, 4.0f, 6.0f});
+    array_eq(x.grad, {1.0f, 4.0f, 2.0f, 5.0f, 3.0f, 6.0f});
+    y.destroy_graph();
+
+    tensor &x_t = x.T();
+    tensor &x_r = x.reorder(1, 0);
+    x_t.forward();
+    x_r.forward();
+    array_eq(x_t.data, x_r.data);
+}

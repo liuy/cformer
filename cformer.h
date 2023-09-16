@@ -30,6 +30,8 @@ struct param {
     int dim;           // parameter of lhs
     int int1;          // first int parameter
     int int2;          // second int parameter
+    int int3;          // third int parameter
+    int int4;          // fourth int parameter
     float float1;      // first float parameter
     af::dim4 dim4;     // parameter of reshape oper
 };
@@ -146,7 +148,22 @@ struct tensor {
      * y = y.detach() + x; solve the problem.
      */
     tensor& detach(void);
+    /**
+     * @brief Reshape the dimensions of the tensor without changing the data.
+     * @param d The new shape of the tensor.
+     * @return the reference of the reshaped tensor
+     */
     tensor& reshape(const af::dim4 &d);
+    /**
+     * @brief Reorder the tensor data according to the given dimensions. For e.g,
+     * x.reorder(2, 0, 1) : [dim0, dim1, dim2) -> [dim2, dim0, dim1]
+     * @param x the dim0 dimension
+     * @param y the dim1 dimension
+     * @param z the dim2 dimension
+     * @param w the dim3 dimension
+     * @return the reference of the reordered tensor
+     */
+    tensor& reorder(int x = 0, int y = 1, int z = 2, int w = 3);
     /**
      * For an array a with two dimensions, T() gives the matrix transpose.
      * For an array with more than two dimensions, the first two dimensions are transposed.

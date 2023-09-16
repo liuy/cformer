@@ -481,6 +481,21 @@ static void bwd_reshape(tensor *a, tensor *dummy, tensor *p)
     update_grad(a, af::moddims(p->grad, a->data.dims()));
 }
 
+static array fwd_reorder(tensor *a, tensor *dummy, tensor *p)
+{
+    return af::reorder(a->data, p->param.int1, p->param.int2, p->param.int3, p->param.int4);
+}
+
+static void bwd_reorder(tensor *a, tensor *dummy, tensor *p)
+{
+    int dims[4];
+    dims[p->param.int1] = 0;
+    dims[p->param.int2] = 1;
+    dims[p->param.int3] = 2;
+    dims[p->param.int4] = 3;
+    update_grad(a, af::reorder(p->grad, dims[0], dims[1], dims[2], dims[3]));
+}
+
 static array fwd_transpose(tensor *a, tensor *dummy, tensor *p)
 {
     return af::transpose(a->data);
@@ -587,6 +602,7 @@ OPERATOR(mulf);
 OPERATOR(divf);
 OPERATOR(slice);
 OPERATOR(reshape);
+OPERATOR(reorder);
 OPERATOR(transpose);
 OPERATOR(stack);
 OPERATOR(rslice);
@@ -634,6 +650,8 @@ METHOD(pow, (float p), nullptr, pow, r->param.float1 = p)
 METHOD(slice, (int dim, int begin, int end), nullptr, slice, \
        r->param.dim = dim; r->param.int1 = begin; r->param.int2 = end)
 METHOD(reshape, (const af::dim4 &dims), nullptr, reshape, r->param.dim4 = dims)
+METHOD(reorder, (int d0, int d1, int d2, int d3), nullptr, reorder, \
+       r->param.int1 = d0; r->param.int2 = d1; r->param.int3 = d2; r->param.int4 = d3)
 METHOD(T, (void), nullptr, transpose)
 METHOD(stack, (tensor &t, int dim), &t, stack, r->param.dim = dim)
 METHOD(rslice, (int dim, int n), nullptr, rslice, \
