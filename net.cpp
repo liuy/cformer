@@ -90,6 +90,36 @@ tensor& multihead_attention::forward(tensor &x, bool training)
 }
 
 /**
+ * Project token indices and positions to embedding space
+ *
+ * For e.g, sequence 'abcdefgh' is batchified (batch_size = 2) as:
+ * [a  e]
+ * [b  f]
+ * [c  g]
+ * [d  h]
+ *
+ * Then x(seq_len=3, batch_size=2) is:
+ * [a  e]
+ * [b  f]
+ * [c  g]
+ *
+ * pos of x:
+ * [0  0]
+ * [1  1]
+ * [2  2]
+ *
+ * Input: x of shape (seq_len, batch_size)
+ * Output: shape (seq_len, embed_dim, batch_size)
+ */
+tensor& GPT_Embedding::forward(tensor &x, bool training)
+{
+    x.forward();
+    tensor pos(af::range(x.data.dims(), 0, x.data.type()));
+    tensor &y = tok_emb(x) + pos_emb(pos); // (seq_len, batch_size, embed_dim)
+    return y.reorder(0, 2, 1); // (seq_len, batch_size, embed_dim) -> (seq_len, embed_dim, batch_size)
+}
+
+/**
  * Maps token indices to one-hot vectors, then projects to embedding space
  *
  * Input: x of shape (seq_len, batch_size)

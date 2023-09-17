@@ -346,7 +346,6 @@ struct layer {
 
 struct block {
     std::vector<layer *> layers;
-    block() = default;
     block(std::initializer_list<layer*> list) : layers(list) {}
     ~block() { for (auto i : layers) delete i; }
     inline void add(layer *l) {layers.push_back(l);}
@@ -410,7 +409,6 @@ struct LayerNorm1d : layer {
     float epsilon;
     tensor weight = tensor(array(), true);
     tensor bias = tensor(array(), true);
-    LayerNorm1d() = default;
     LayerNorm1d(int dim, float e = 1e-5, const af::dtype t = f32)
         : epsilon(e)
         {name = "LN1d"; weight.init(ones(1, dim, t)); bias.init(zeros(1, dim, t));}
@@ -498,7 +496,6 @@ struct multihead_attention {
     tensor bias_o = tensor(array(), true);
     Dropout attn_drop = Dropout(dropout);
     Dropout proj_drop = Dropout(dropout);
-    multihead_attention() = default;
     multihead_attention(int dim, int nheads = 8, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
         assert(dim % nheads == 0);
         num_heads = nheads; embed_dim = dim; dropout = dp; no_bias = nb;
@@ -525,14 +522,13 @@ struct GPT_block {
     multihead_attention attn;
     LayerNorm1d ln2;
     block mlp;
-    GPT_block(int dim, int nheads, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
-        ln1 = LayerNorm1d(dim, 1e-5, t);
-        attn = multihead_attention(dim, nheads, dp, nb, t);
-        ln2 = LayerNorm1d(dim, 1e-5, t);
-        mlp = block({new Linear(dim, dim * 4, GELU, nb, xavier_normal, t),
-                     new Linear(dim * 4, dim, None, nb, xavier_normal, t),
-                     new Dropout(dp)});
-    }
+    GPT_block(int dim, int nheads, float dp = 0.0, bool nb = true, const af::dtype t = f32)
+        : ln1(dim, 1e-5, t),
+          attn(dim, nheads, dp, nb, t),
+          ln2(dim, 1e-5, t),
+          mlp({new Linear(dim, dim * 4, GELU, nb, xavier_normal, t),
+               new Linear(dim * 4, dim, None, nb, xavier_normal, t),
+               new Dropout(dp)}) {}
     /**
      * Residual connection is crucial for two reasons:
      * 1. Similiar to ResNet, it helps to avoid vanishing gradients.
@@ -542,6 +538,18 @@ struct GPT_block {
         tensor &y = x + attn(ln1(x), training);
         return y + mlp(ln2(y), training);
     }
+};
+
+struct GPT_Embedding : layer {
+    Embedding tok_emb;
+    Embedding pos_emb;
+    GPT_Embedding(int vocab_size, int embed_dim, int seq_len, const af::dtype t = f32)
+        : tok_emb(vocab_size, embed_dim, t),
+          pos_emb(seq_len, embed_dim, t) {}
+    tensor& forward(tensor &x, bool training = false) override;
+    std::vector<tensor *> parameters(void) override { return {&tok_emb.weight, &pos_emb.weight}; }
+    layer_stat stat(void) override { return {tok_emb.weight.data.dims(0), tok_emb.weight.data.dims(1),
+                                             tok_emb.weight.data.elements() + pos_emb.weight.data.elements()}; }
 };
 
 struct optimizer {
