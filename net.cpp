@@ -57,6 +57,19 @@ static inline array create_causal_mask(dim_t seq_len, dim_t num_heads, dim_t bat
     return triu;
 }
 
+multihead_attention::multihead_attention(int dim, int nheads, float dp, bool nb, const af::dtype t)
+    : attn_drop(dp), proj_drop(dp)
+{
+    assert(dim % nheads == 0);
+    num_heads = nheads; embed_dim = dim; dropout = dp; no_bias = nb;
+    weight_qkv.init(xavier_normal(dim, dim * 3, t));
+    weight_o.init(xavier_normal(dim, dim, t));
+    if (!no_bias) {
+        bias_qkv.init(zeros(1, dim * 3, t));
+        bias_o.init(zeros(1, dim, t));
+    }
+}
+
 /**
  * Multihead Attention is a type of attention mechanism that is used in the Transformer
  *
@@ -114,7 +127,7 @@ tensor& multihead_attention::forward(tensor &x, bool training)
 tensor& GPT_Embedding::forward(tensor &x, bool training)
 {
     x.forward();
-    tensor pos(af::range(x.data.dims(), 0, x.data.type()));
+    static tensor pos(af::range(x.data.dims(), 0, x.data.type())); // static allocation for graph
     tensor &y = tok_emb(x) + pos_emb(pos); // (seq_len, batch_size, embed_dim)
     return y.reorder(0, 2, 1); // (seq_len, batch_size, embed_dim) -> (seq_len, embed_dim, batch_size)
 }
@@ -542,16 +555,16 @@ void seqnet::summary(void)
     int i = 0;
     size_t total_params = 0;
     printf("\n%s:\n", name);
-    printf("+-------+---------+-------+--------+------+------------+------------+\n");
-    printf("| Layer | Name    | Input | Output | Bias | Activation | Parameters |\n");
-    printf("+-------+---------+-------+--------+------+------------+------------+\n");
+    printf("+-------+------------+-------+--------+------+------------+------------+\n");
+    printf("| Layer |   Name     | Input | Output | Bias | Activation | Parameters |\n");
+    printf("+-------+------------+-------+--------+------+------------+------------+\n");
     for (auto layer : layers) {
         layer_stat st = layer->stat();
         total_params += st.num_params;
-        printf("| %-5d | %-7s | %-5lld | %-6lld | %-4s | %-10s | %-'10lld |\n", i++, layer->name,
+        printf("| %-5d | %-10s | %-5lld | %-6lld | %-4s | %-10s | %-'10lld |\n", i++, layer->name,
             st.in, st.out, layer->no_bias ? "None" : "Yes", activ_name[layer->act], st.num_params);
     }
-    printf("+-------+---------+-------+--------+------+------------+------------+\n");
+    printf("+-------+------------+-------+--------+------+------------+------------+\n");
     printf("Total params: %ld\n", total_params);
     printf("Running on:\n");
     af::info();

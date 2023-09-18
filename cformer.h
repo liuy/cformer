@@ -429,7 +429,8 @@ struct LayerNorm1d : layer {
 struct Dropout : layer {
     float p;
     Dropout(float prob = 0.2) : p(prob) {
-        assert(p >= 0.0 && p < 1.0);
+        // printf("Dropout probability %.2f\n", p);
+        assert(prob >= 0.0 && prob < 1.0);
         name = "Dropout"; no_bias = true;
         }
     tensor& forward(tensor &x, bool training = false) override;
@@ -502,18 +503,9 @@ struct multihead_attention {
     tensor bias_qkv = tensor(array(), true);
     tensor weight_o = tensor(array(), true);
     tensor bias_o = tensor(array(), true);
-    Dropout attn_drop = Dropout(dropout);
-    Dropout proj_drop = Dropout(dropout);
-    multihead_attention(int dim, int nheads = 8, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
-        assert(dim % nheads == 0);
-        num_heads = nheads; embed_dim = dim; dropout = dp; no_bias = nb;
-        weight_qkv.init(xavier_normal(dim, dim * 3, t));
-        weight_o.init(xavier_normal(dim, dim, t));
-        if (!no_bias) {
-            bias_qkv.init(zeros(1, dim * 3, t));
-            bias_o.init(zeros(1, dim, t));
-        }
-    }
+    Dropout attn_drop;
+    Dropout proj_drop;
+    multihead_attention(int dim, int nheads = 8, float dp = 0.0, bool nb = true, const af::dtype t = f32);
     tensor& forward(tensor &x, bool training = false);
     inline tensor& operator()(tensor &x, bool training = false) {return forward(x, training);}
     std::vector<tensor *> parameters(void) {
@@ -544,17 +536,22 @@ struct GPT_cell {
     }
     std::vector<tensor *> parameters(void) {
         std::vector<tensor *> params;
-        params.insert(params.end(), attn.parameters().begin(), attn.parameters().end());
-        params.insert(params.end(), mlp.parameters().begin(), mlp.parameters().end());
-        params.insert(params.end(), ln1.parameters().begin(), ln1.parameters().end());
-        params.insert(params.end(), ln2.parameters().begin(), ln2.parameters().end());
+        std::vector<tensor *> p = attn.parameters();
+        params.insert(params.end(), p.begin(), p.end());
+        p = mlp.parameters();
+        params.insert(params.end(), p.begin(), p.end());
+        p = ln1.parameters();
+        params.insert(params.end(), p.begin(), p.end());
+        p = ln2.parameters();
+        params.insert(params.end(), p.begin(), p.end());
         return params;
     }
 };
 
 struct GPT_Block : layer {
     std::vector<GPT_cell *> cells;
-    GPT_Block(int num_layers, int dim, int nheads, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
+    GPT_Block(int dim, int nheads, int num_layers, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
+        name = "GPT_Block"; no_bias = nb;
         for (int i = 0; i < num_layers; i++)
             cells.push_back(new GPT_cell(dim, nheads, dp, nb, t));
     }
@@ -589,7 +586,7 @@ struct GPT_Embedding : layer {
     Embedding pos_emb;
     GPT_Embedding(int vocab_size, int embed_dim, int seq_len, const af::dtype t = f32)
         : tok_emb(vocab_size, embed_dim, t),
-          pos_emb(seq_len, embed_dim, t) {}
+          pos_emb(seq_len, embed_dim, t) { name = "GPT_Embed"; no_bias = true; }
     tensor& forward(tensor &x, bool training = false) override;
     std::vector<tensor *> parameters(void) override { return {&tok_emb.weight, &pos_emb.weight}; }
     layer_stat stat(void) override { return {tok_emb.weight.data.dims(0), tok_emb.weight.data.dims(1),
