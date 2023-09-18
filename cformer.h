@@ -356,6 +356,14 @@ struct block {
         return *y;
     }
     inline tensor& operator()(tensor &x, bool training = false) {return forward(x, training);}
+    std::vector<tensor *> parameters(void) {
+        std::vector<tensor *> params;
+        for (auto l : layers) {
+            std::vector<tensor *> p = l->parameters();
+            params.insert(params.end(), p.begin(), p.end());
+        }
+        return params;
+    }
 };
 
 struct Linear : layer {
@@ -509,20 +517,16 @@ struct multihead_attention {
     tensor& forward(tensor &x, bool training = false);
     inline tensor& operator()(tensor &x, bool training = false) {return forward(x, training);}
     std::vector<tensor *> parameters(void) {
-        return {&weight_qkv, &weight_o, &bias_o};
-    }
-    layer_stat stat(void) {
-        return {embed_dim, embed_dim, weight_qkv.data.elements() + weight_o.data.elements()
-                + bias_o.data.elements()};
+        return {&weight_qkv, &weight_o, &bias_o, &bias_qkv};
     }
 };
 
-struct GPT_block {
+struct GPT_cell {
     LayerNorm1d ln1;
     multihead_attention attn;
     LayerNorm1d ln2;
     block mlp;
-    GPT_block(int dim, int nheads, float dp = 0.0, bool nb = true, const af::dtype t = f32)
+    GPT_cell(int dim, int nheads, float dp = 0.0, bool nb = true, const af::dtype t = f32)
         : ln1(dim, 1e-5, t),
           attn(dim, nheads, dp, nb, t),
           ln2(dim, 1e-5, t),
@@ -538,6 +542,46 @@ struct GPT_block {
         tensor &y = x + attn(ln1(x), training);
         return y + mlp(ln2(y), training);
     }
+    std::vector<tensor *> parameters(void) {
+        std::vector<tensor *> params;
+        params.insert(params.end(), attn.parameters().begin(), attn.parameters().end());
+        params.insert(params.end(), mlp.parameters().begin(), mlp.parameters().end());
+        params.insert(params.end(), ln1.parameters().begin(), ln1.parameters().end());
+        params.insert(params.end(), ln2.parameters().begin(), ln2.parameters().end());
+        return params;
+    }
+};
+
+struct GPT_Block : layer {
+    std::vector<GPT_cell *> cells;
+    GPT_Block(int num_layers, int dim, int nheads, float dp = 0.0, bool nb = true, const af::dtype t = f32) {
+        for (int i = 0; i < num_layers; i++)
+            cells.push_back(new GPT_cell(dim, nheads, dp, nb, t));
+    }
+    inline tensor& forward(tensor &x, bool training = false) {
+        tensor *y = &x;
+        for (auto c : cells)
+            y = &c->forward(*y, training);
+        return *y;
+    }
+    std::vector<tensor *> parameters(void) override {
+        std::vector<tensor *> params;
+        for (auto c : cells) {
+            std::vector<tensor *> p = c->parameters();
+            params.insert(params.end(), p.begin(), p.end());
+        }
+        return params;
+    }
+    layer_stat stat(void) override {
+        layer_stat s = {0, 0, 0};
+        for (auto c : cells)
+            for (auto p : c->parameters())
+                s.num_params += p->data.elements();
+        s.in = cells[0]->attn.embed_dim;
+        s.out = cells[0]->attn.embed_dim;
+        return s;
+    }
+    ~GPT_Block(void) {for (auto c : cells) delete c;}
 };
 
 struct GPT_Embedding : layer {
