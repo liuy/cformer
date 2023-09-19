@@ -127,8 +127,8 @@ tensor& multihead_attention::forward(tensor &x, bool training)
 tensor& GPT_Embedding::forward(tensor &x, bool training)
 {
     x.forward();
-    static tensor pos(af::range(x.data.dims(), 0, x.data.type())); // static allocation for graph
-    tensor &y = tok_emb(x) + pos_emb(pos); // (seq_len, batch_size, embed_dim)
+    tensor *pos = make_tensor(af::range(x.data.dims(), 0, x.data.type()));
+    tensor &y = tok_emb(x) + pos_emb(*pos); // (seq_len, batch_size, embed_dim)
     return y.reorder(0, 2, 1); // (seq_len, batch_size, embed_dim) -> (seq_len, embed_dim, batch_size)
 }
 

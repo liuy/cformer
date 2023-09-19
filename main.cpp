@@ -45,8 +45,8 @@ int main(int argc, char* argv[])
     set.load();
     seqnet model {
         new GPT_Embedding(set.tokenizer.vocab.size(), 192, 32),
-        new Dropout(0.1),
-        new GPT_Block(192, 4, 2, 0.1),
+        new Dropout(0.0),
+        new GPT_Block(192, 4, 1, 0.0),
         new LayerNorm1d(192),
         new Linear(192, set.tokenizer.vocab.size(), None, true, xavier_normal),
     };
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
     Adam op(model.params, 0.0005);
     trainer tr = {
         .epochs = 75,
-        .batch_size = 2,
+        .batch_size = 4,
         .seq_len = 32,
         .optimizer = op,
         .loss_fn = logits_cross_entroy,

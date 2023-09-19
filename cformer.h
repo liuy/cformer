@@ -203,6 +203,13 @@ struct tensor {
     tensor& operator-(void);
 };
 
+static inline tensor* make_tensor(const array &a, bool ng = false)
+{
+    tensor *t = new tensor(a, ng);
+    t->no_delete = false;
+    return t;
+}
+
 // kaiming_uniform is randu value [-limit, limit] and mostly for ReLU activation
 static inline array kaiming_uniform(int in, int out, const af::dtype t = f32)
 {
@@ -555,11 +562,15 @@ struct GPT_Block : layer {
         for (int i = 0; i < num_layers; i++)
             cells.push_back(new GPT_cell(dim, nheads, dp, nb, t));
     }
+    /**
+     * Input: x of shape (seq_len, embed_dim, batch_size)
+     * Output: y of shape (seq_len * batch_size, embed_dim)
+     */
     inline tensor& forward(tensor &x, bool training = false) {
         tensor *y = &x;
         for (auto c : cells)
             y = &c->forward(*y, training);
-        return *y;
+        return y->reorder(0, 2, 1).reshape({-1, cells[0]->attn.embed_dim});
     }
     std::vector<tensor *> parameters(void) override {
         std::vector<tensor *> params;
