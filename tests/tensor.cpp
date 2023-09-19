@@ -598,6 +598,10 @@ TEST(Tensor, batched_matmul)
     array_eq(c.grad, {4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f});
     array_eq(d.grad, {4.0f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f});
     t2.destroy_graph();
+
+    tensor &t3 = (c * 2).matmul(d * 2);
+    t3.backward();
+    array_shape_eq(t3.data, {2, 2, 2});
 }
 
 TEST(Tensor, gelu)

@@ -152,7 +152,7 @@ static void bwd_matmul(tensor *a, tensor *b, tensor *p)
     dim_t nt = matnt.numdims();
     dim_t tn = mattn.numdims();
 
-    if (likely(a->grad.numdims() == nt)) {
+    if (likely(a->data.numdims() == nt)) {
         update_grad(a, matnt);
     } else { // batched matmul and implicit broadcast
         if (nt = 3)
@@ -161,7 +161,7 @@ static void bwd_matmul(tensor *a, tensor *b, tensor *p)
             panic("Not support batched matmul with dim > 3");
     }
 
-    if (likely(b->grad.numdims()  == tn)) {
+    if (likely(b->data.numdims()  == tn)) {
         update_grad(b, mattn);
     } else { // batched matmul and implicit broadcast
         if (tn = 3)
