@@ -473,6 +473,13 @@ static void bwd_slice(tensor *a, tensor *dummy, tensor *p)
 
 static array fwd_reshape(tensor *a, tensor *dummy, tensor *p)
 {
+    for (int i = 0; i < 4; i++)
+        if (p->param.dim4[i] == -1) {
+            dim_t total = -p->param.dim4[0] * p->param.dim4[1] * p->param.dim4[2] * p->param.dim4[3];
+            cf_assert(a->data.elements() % total == 0, "reshape dim %lld is not dividable by %lld", a->data.elements(), total);
+            p->param.dim4[i] = a->data.elements() / total;
+            break;
+        }
     return af::moddims(a->data, p->param.dim4);
 }
 

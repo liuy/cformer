@@ -18,6 +18,12 @@ static inline void array_eq(const array &a, const array &b)
         EXPECT_NEAR(index(a, i), index(b, i), 1e-6);
 }
 
+static inline void array_shape_eq(const array &a, std::initializer_list<dim_t> shape)
+{
+    for (int i = 0; i < shape.size(); i++)
+        EXPECT_EQ(a.dims(i), shape.begin()[i]);
+}
+
 TEST(Tensor, add_sub_mul_div)
 {
     tensor a(af::constant(1, 1, 3), true);
@@ -477,6 +483,11 @@ TEST(Tensor, reshape)
     array_eq(y.data, {0.0f, 2.0f, 4.0f, 6.0f, 8.0f, 10.0f});
     array_eq(x.grad, {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f});
     y.destroy_graph();
+
+    tensor x1(af::iota({2,3,2}), true);
+    tensor &y1 = x1.reshape({-1,4});
+    y1.backward();
+    array_shape_eq(y1.data, {3,4});
 }
 
 TEST(Tensor, transpose)
