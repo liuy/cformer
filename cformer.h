@@ -817,6 +817,8 @@ static inline array stable_softmax(const array &a)
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
+# define M_PIf		3.14159265358979323846f	/* pi */ // For older glibc
+
 static inline int random(int from, int to)
 {
     static bool start = true;
