@@ -516,6 +516,8 @@ struct multihead_attention {
     tensor& forward(tensor &x, bool training = false);
     inline tensor& operator()(tensor &x, bool training = false) {return forward(x, training);}
     std::vector<tensor *> parameters(void) {
+        if (no_bias)
+            return {&weight_qkv, &weight_o};
         return {&weight_qkv, &weight_o, &bias_o, &bias_qkv};
     }
 };

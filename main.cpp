@@ -44,18 +44,18 @@ int main(int argc, char* argv[])
     data set(txt_reader, false);
     set.load();
     seqnet model {
-        new GPT_Embedding(set.tokenizer.vocab.size(), 192, 32),
+        new GPT_Embedding(set.tokenizer.vocab.size(), 256, 64),
         new Dropout(0.0),
-        new GPT_Block(192, 4, 1, 0.0),
-        new LayerNorm1d(192),
-        new Linear(192, set.tokenizer.vocab.size(), None, true, xavier_normal),
+        new GPT_Block(256, 8, 1, 0.0),
+        new LayerNorm1d(256),
+        new Linear(256, set.tokenizer.vocab.size(), None, true, xavier_normal),
     };
     af::timer t = af::timer::start();
     Adam op(model.params, 0.0005);
     trainer tr = {
-        .epochs = 75,
-        .batch_size = 4,
-        .seq_len = 32,
+        .epochs = 50,
+        .batch_size = 64,
+        .seq_len = 64,
         .optimizer = op,
         .loss_fn = logits_cross_entroy,
         .metrics_fn = categorical_accuracy,
