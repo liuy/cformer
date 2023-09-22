@@ -851,7 +851,7 @@ static inline int random(int from, int to)
  * \return Sampled idx from filtered logits by top_k or top_p. If both top_k and top_p
  *         are set, then sample from min(top_k, top_p) elements.
  */
-static inline uint32_t logits_sample_next(array &logits, int top_k = 5, float top_p = 0.0)
+static inline uint32_t logits_sample_next(const array &logits, int top_k = 5, float top_p = 0.0)
 {
     cf_assert(logits.dims(0) == 1, "only support row vector.");
 
