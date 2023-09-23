@@ -33,7 +33,7 @@ static void generate(seqnet &model, tokenizer &tok, const std::string &prompt, i
         uint32_t idx = logits_sample_next(y.data.row(-1), 1, 0.0);
         std::cout << tok.idx2token[idx];
         ids.push_back(idx);
-        ids = vector_tail(ids, 64);
+        ids = vector_tail(ids, 512);
         x = ids2tensor(ids);
     }
     printf("\n");
@@ -54,9 +54,9 @@ int main(int argc, char* argv[])
     data set(txt_reader, false);
     set.load();
     seqnet model {
-        new GPT_Embedding(set.tokenizer.vocab.size(), 768, 64),
+        new GPT_Embedding(set.tokenizer.vocab.size(), 768, 512),
         new Dropout(0.0),
-        new GPT_Block(768, 16, 1, 0.0),
+        new GPT_Block(768, 8, 1, 0.0),
         new LayerNorm1d(768),
         new Linear(768, set.tokenizer.vocab.size(), None, true, xavier_normal),
     };
@@ -64,8 +64,8 @@ int main(int argc, char* argv[])
     Adam op(model.params, 0.0005);
     trainer tr = {
         .epochs = 50,
-        .batch_size = 256,
-        .seq_len = 64,
+        .batch_size = 32,
+        .seq_len = 512,
         .optimizer = op,
         .loss_fn = logits_cross_entroy,
         .metrics_fn = categorical_accuracy,

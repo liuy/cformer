@@ -424,13 +424,22 @@ struct LayerNorm1d : layer {
     float epsilon;
     tensor weight = tensor(array(), true);
     tensor bias = tensor(array(), true);
-    LayerNorm1d(int dim, float e = 1e-5, const af::dtype t = f32)
-        : epsilon(e)
-        {name = "LN1d"; weight.init(ones(1, dim, t)); bias.init(zeros(1, dim, t));}
+    LayerNorm1d(int dim, float e = 1e-5, bool nb = true, const af::dtype t = f32)
+        : epsilon(e) {
+        name = "LN1d"; no_bias = nb;
+        weight.init(ones(1, dim, t));
+        if (!no_bias)
+            bias.init(zeros(1, dim, t));
+    }
     tensor& forward(tensor &x, bool training = false) override;
-    std::vector<tensor *> parameters(void) override { return {&weight, &bias}; }
+    std::vector<tensor *> parameters(void) override {
+        if (no_bias)
+            return {&weight};
+        return {&weight, &bias};
+    }
     layer_stat stat(void) override
-    { return {weight.data.dims(1), weight.data.dims(1), weight.data.elements() + bias.data.elements()}; }
+    { return {weight.data.dims(1), weight.data.dims(1),
+     no_bias ? weight.data.elements() : weight.data.elements() + bias.data.elements()}; }
 };
 
 struct Dropout : layer {

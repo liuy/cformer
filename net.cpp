@@ -354,6 +354,8 @@ tensor& BatchNorm1d::forward(tensor &x, bool training)
 tensor& LayerNorm1d::forward(tensor &x, bool training)
 {
     tensor &y = x.normalize1d(1, epsilon);
+    if (no_bias)
+        return y * weight.expandas(x);
     return y * weight.expandas(x) + bias.expandas(x);
 }
 
